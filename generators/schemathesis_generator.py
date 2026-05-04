@@ -1,9 +1,7 @@
-from schemathesis import openapi
+import schemathesis
 
-class FuzzGenerator:
-    def __init(self, schema_path):
-        self.schema = openapi.from_path(schema_path)
+schema = schemathesis.openapi.from_path("api_schema.yaml")
 
-    def generate_test_case(self):
-        for case in self.schema.fuzz():
-            yield case
+@schema.parametrize()
+def run_case(case):
+    case.call() 

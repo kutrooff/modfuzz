@@ -1,1 +1,4 @@
-# здесь будет описано изменение стратегии исходя из полученных данных фаззинга
+class StrategyManager:
+    def select_test_case(self, test_case, analyzer):
+        return test_case
+
