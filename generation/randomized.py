@@ -1,0 +1,54 @@
+from random import choices, randint, choice
+from string import ascii_letters, digits
+from typing import List, Any
+from schema.models import Endpoint, TestCase
+
+def random_string(length: int=10) -> str:
+    """
+    Генерирует случайную строку заданной длины:
+    :param length длина строки
+    :return:
+        str Случайно сформированная строка из букв и цифр
+    """
+    return "".join(choices(ascii_letters + digits, k=length))
+
+def random_value(param_type: str) -> Any:
+    """
+    Генерирует случайное значение определенного типа:
+    :param param_type тип для генерации
+    """
+    if param_type == "string":
+        return random_string(randint(0, 50))
+    elif param_type == "integer":
+        return randint(-1000, 1000)
+    elif param_type == "boolean":
+        return choice([True, False])
+    elif param_type == "array":
+        return [random_string(5) for _ in range(randint(0,5))]
+    else:
+        return "example"
+
+def generate_random_cases(endpoints: List[Endpoint], n: int = 3) -> List[TestCase]:
+    test_cases = []
+
+    for endpoint in endpoints:
+        for _ in range(n):
+            path_params = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "path"}
+            query_params = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "query"}
+            headers = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "header"}
+            body = endpoint.request_body.schema if endpoint.request_body else None
+
+            test_cases.append(
+                TestCase(
+                    endpoint=endpoint,
+                    method=endpoint.method,
+                    path_params=path_params,
+                    query_params=query_params,
+                    headers=headers,
+                    body=body,
+                    expected_statuses=list(endpoint.responses.keys()) if endpoint.responses else [200],
+                    strategy="random"
+                )
+            )
+
+    return test_cases
