@@ -1,8 +1,6 @@
 from typing import List
 
-from hypothesis_graphql.strategies import query
-
-from schema.models import Endpoint, Parameter, RequestBody, TestCase
+from schema.models import Endpoint, TestCase
 
 def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
     """

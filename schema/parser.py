@@ -1,4 +1,3 @@
-# parser.py
 from typing import List, Dict
 from models import Endpoint, Parameter, RequestBody, Response
 

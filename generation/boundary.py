@@ -1,8 +1,6 @@
-from typing import List, Any
+from typing import List
 
-from numpy.ma.core import minimum, maximum
-
-from schema.models import Endpoint, TestCase, Parameter, RequestBody
+from schema.models import Endpoint, TestCase
 
 
 def generate_boundary_cases(endpoints: List[Endpoint]) -> List[TestCase]:
