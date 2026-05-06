@@ -1,5 +1,5 @@
 from typing import List, Dict
-from models import Endpoint, Parameter, RequestBody, Response
+from schema.models import Endpoint, Parameter, RequestBody, Response
 
 def parse_openapi(schema: Dict) -> List[Endpoint]:
     endpoints: List[Endpoint] = []

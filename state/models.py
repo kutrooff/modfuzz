@@ -27,7 +27,7 @@ class OperationLink:
 class DependencyGraph:
     links: List[OperationLink] = field(default_factory=list)
 
-    def consumer_for(self, endpoint: Endpoint) -> List[OperationLink]:
+    def consumers_for(self, endpoint: Endpoint) -> List[OperationLink]:
         return [
             link for link in self.links
             if link.source.path == endpoint.path

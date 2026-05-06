@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Any
 
 from schema.models import TestCase
-from manager import StateManager
+from state.manager import StateManager
 
 class StateResolver:
     """Подставляет значения из StateManager в TestCase"""

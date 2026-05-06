@@ -1,7 +1,7 @@
 from typing import List
 
 from schema.models import Endpoint
-from models import DependencyGraph, OperationLink
+from state.models import DependencyGraph, OperationLink
 
 class DependencyAnalyzer:
     """

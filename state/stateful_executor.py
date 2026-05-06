@@ -4,9 +4,9 @@ from execution.checks import run_default_checks
 from execution.http_client import AsyncHttpExecutor
 from execution.result import ExecutionResult
 from schema.models import TestCase
-from extractor import StateExtractor
-from manager import StateManager
-from resolver import StateResolver
+from state.extractor import StateExtractor
+from state.manager import StateManager
+from state.resolver import StateResolver
 
 class StatefulExecutor:
     """
@@ -28,9 +28,9 @@ class StatefulExecutor:
         resolver: StateResolver | None = None,
         ):
 
-        self.http_executor = http_executor,
-        self.state_manager = state_manager or StateManager(),
-        self.extractor = extractor or StateExtractor(),
+        self.http_executor = http_executor
+        self.state_manager = state_manager or StateManager()
+        self.extractor = extractor or StateExtractor()
         self.resolver = resolver or StateResolver(self.state_manager)
 
 

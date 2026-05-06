@@ -70,9 +70,12 @@ class StateExtractor:
         :param path передаваемый путь
         :return: str значение пути
         """
-        parts = [part for part in path.split("/") if part and part.startswith("{")]
+        parts = [
+            part for part in path.split("/")
+            if part and not part.startswith("{")
+        ]
 
         if not parts:
-            return "resourse"
+            return "resource"
 
         return parts[0]

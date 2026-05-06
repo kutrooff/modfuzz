@@ -15,7 +15,7 @@ def generate_boundary_cases(endpoints: List[Endpoint]) -> List[TestCase]:
         for param in endpoint.parameters:
             boundary_values = []
 
-            if param.type_ == "interger":
+            if param.type_ == "integer":
                 minimum = param.schema.get("minimum", 0)
                 maximum = param.schema.get("maximum", 100)
                 boundary_values = [minimum, maximum, minimum - 1, maximum + 1]

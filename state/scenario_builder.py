@@ -1,7 +1,7 @@
 from typing import List
 
 from schema.models import Endpoint, TestCase
-from dependencies import DependencyAnalyzer
+from state.dependencies import DependencyAnalyzer
 
 
 class StatefulScenarioBuilder:
