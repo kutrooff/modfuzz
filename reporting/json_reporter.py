@@ -1,0 +1,120 @@
+import json
+
+from pathlib import Path
+from datetime import datetime
+
+
+class JsonReporter:
+
+    def export(
+        self,
+        results,
+        findings_counter,
+        output_dir="reports"
+    ):
+
+        Path(output_dir).mkdir(
+            exist_ok=True
+        )
+
+        timestamp = datetime.now().strftime(
+            "%Y%m%d_%H%M%S"
+        )
+
+        report_path = (
+            Path(output_dir)
+            / f"report_{timestamp}.json"
+        )
+
+        report = {
+
+            "session": {
+
+                "timestamp": timestamp,
+
+                "total_requests": len(results),
+
+                "total_findings": sum(
+                    findings_counter.values()
+                ),
+
+                "issues": dict(
+                    findings_counter
+                )
+            },
+
+            "results": [
+                self._serialize_result(r)
+                for r in results
+            ]
+        }
+
+        with open(
+            report_path,
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            json.dump(
+                report,
+                f,
+                indent=4,
+                ensure_ascii=False
+            )
+
+        return report_path
+
+    def _serialize_result(
+        self,
+        result
+    ):
+
+        return {
+
+            "method":
+                result.case.method,
+
+            "path":
+                result.case.endpoint.path,
+
+            "status_code":
+                result.status_code,
+
+            "success":
+                result.success,
+
+            "issues":
+                result.analysis.get(
+                    "issues",
+                    []
+                ),
+
+            "severity":
+                result.analysis.get(
+                    "severity"
+                ),
+
+            "request": {
+
+                "path_params":
+                    result.case.path_params,
+
+                "query_params":
+                    result.case.query_params,
+
+                "headers":
+                    result.case.headers,
+
+                "body":
+                    result.case.body
+            },
+
+            "response": {
+
+                "body":
+                    result.response_body,
+
+                "error":
+                    result.error
+            }
+        }
