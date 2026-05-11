@@ -38,6 +38,7 @@ async def main():
         print("STATUS:", result.status_code)
         print("RESULT:", "OK" if result.success else "FAILED")
         print("CHECKS:", result.checks)
+        print("ANALYSIS:", result.analysis)
         print("ERROR:", result.error or "")
 
         print("REQUEST QUERY PARAMS:", result.case.query_params)

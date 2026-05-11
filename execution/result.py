@@ -15,3 +15,4 @@ class ExecutionResult:
     checks: List[str] = field(default_factory=list)
     request_url: Optional[str] = None
     request_method: Optional[str] = None
+    analysis: Dict[str, Any] = field(default_factory=dict)

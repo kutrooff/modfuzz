@@ -7,6 +7,8 @@ from schema.models import TestCase
 from state.extractor import StateExtractor
 from state.manager import StateManager
 from state.resolver import StateResolver
+from analysis.response_analyzer import ResponseAnalyzer
+from strategy.manager import AdaptiveStrategyManager
 
 class StatefulExecutor:
     """
@@ -32,6 +34,8 @@ class StatefulExecutor:
         self.state_manager = state_manager or StateManager()
         self.extractor = extractor or StateExtractor()
         self.resolver = resolver or StateResolver(self.state_manager)
+        self.analyzer = ResponseAnalyzer()
+        self.strategy_manager = AdaptiveStrategyManager()
 
 
     async def run_case(self, case: TestCase) -> ExecutionResult:
@@ -40,7 +44,7 @@ class StatefulExecutor:
         result = await self.http_executor.send(resolved_case)
 
         result = run_default_checks(result)
-
+        result.analysis = self.analyzer.analyze(result)
         extracted = self.extractor.extract(result)
 
         for key, value in extracted.items():

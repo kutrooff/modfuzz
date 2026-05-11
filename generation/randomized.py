@@ -2,6 +2,9 @@ from random import choices, randint, choice
 from string import ascii_letters, digits
 from typing import List, Any
 from schema.models import Endpoint, TestCase
+from generation.mutation_engine import MutationEngine
+
+mutation_engine = MutationEngine()
 
 def random_string(length: int=10) -> str:
     """
@@ -18,7 +21,27 @@ def random_value(param_type: str) -> Any:
     :param param_type тип для генерации
     """
     if param_type == "string":
+
+        dangerous_values = [
+            "error",
+            "crash",
+            "slow",
+            "empty",
+            "invalid",
+            "random",
+
+            "' OR 1=1 --",
+            "<script>alert(1)</script>",
+            "../../../etc/passwd",
+            "A" * 10000,
+            "",
+        ]
+
+        if randint(1, 4) == 1:
+            return choice(dangerous_values)
+
         return random_string(randint(0, 50))
+
     elif param_type == "integer":
         return randint(-1000, 1000)
     elif param_type == "boolean":
@@ -60,7 +83,7 @@ def generate_from_schema(schema: dict):
 
     return None
 
-def generate_random_cases(endpoints: List[Endpoint], n: int = 3) -> List[TestCase]:
+def generate_random_cases(endpoints: List[Endpoint], n: int = 3, mutations=None) -> List[TestCase]:
     test_cases = []
 
     for endpoint in endpoints:
@@ -73,6 +96,12 @@ def generate_random_cases(endpoints: List[Endpoint], n: int = 3) -> List[TestCas
                 if endpoint.request_body
                 else None
             )
+
+            if body and mutations:
+                body = mutation_engine.apply_mutations(
+                    body,
+                    mutations,
+                )
 
             test_cases.append(
                 TestCase(
