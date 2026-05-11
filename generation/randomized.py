@@ -28,6 +28,38 @@ def random_value(param_type: str) -> Any:
     else:
         return "example"
 
+def generate_from_schema(schema: dict):
+    """
+    Генерирует request body на основе OpenAPI schema.
+    """
+
+    schema_type = schema.get("type")
+
+    if schema_type == "string":
+        return schema.get("example", random_string(randint(5, 15)))
+
+    elif schema_type == "integer":
+        return schema.get("example", randint(0, 1000))
+
+    elif schema_type == "boolean":
+        return choice([True, False])
+
+    elif schema_type == "array":
+        items_schema = schema.get("items", {})
+        return [generate_from_schema(items_schema)]
+
+    elif schema_type == "object":
+        result = {}
+
+        properties = schema.get("properties", {})
+
+        for property_name, property_schema in properties.items():
+            result[property_name] = generate_from_schema(property_schema)
+
+        return result
+
+    return None
+
 def generate_random_cases(endpoints: List[Endpoint], n: int = 3) -> List[TestCase]:
     test_cases = []
 
@@ -36,7 +68,11 @@ def generate_random_cases(endpoints: List[Endpoint], n: int = 3) -> List[TestCas
             path_params = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "path"}
             query_params = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "query"}
             headers = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "header"}
-            body = endpoint.request_body.schema if endpoint.request_body else None
+            body = (
+                generate_from_schema(endpoint.request_body.schema)
+                if endpoint.request_body
+                else None
+            )
 
             test_cases.append(
                 TestCase(

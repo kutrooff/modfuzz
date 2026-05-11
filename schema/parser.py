@@ -25,7 +25,13 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
             if "requestBody" in info:
                 content = info["requestBody"].get("content", {})
                 if "application/json" in content:
-                    schema_body = content["application/json"].get("schema", {})
+                    raw_schema = content["application/json"].get("schema", {})
+
+                    if "$ref" in raw_schema:
+                        schema_body = resolve_ref(raw_schema["$ref"], schema)
+                    else:
+                        schema_body = raw_schema
+
                     request_body = RequestBody(
                         content_type="application/json",
                         schema=schema_body,
@@ -53,3 +59,13 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
             )
             endpoints.append(endpoint)
     return endpoints
+
+def resolve_ref(ref: str, schema: dict):
+    path = ref.replace("#/", "").split("/")
+
+    current = schema
+
+    for part in path:
+        current = current[part]
+
+    return current

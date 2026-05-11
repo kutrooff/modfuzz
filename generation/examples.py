@@ -27,7 +27,33 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
 
         body = None
         if endpoint.request_body:
-            body = endpoint.request_body.schema.get("example", {"example_field": "example"})
+            schema = endpoint.request_body.schema
+
+            if schema.get("type") == "object":
+                body = {}
+
+                properties = schema.get("properties", {})
+
+                for property_name, property_schema in properties.items():
+                    if "example" in property_schema:
+                        body[property_name] = property_schema["example"]
+                    else:
+                        property_type = property_schema.get("type")
+
+                        if property_type == "string":
+                            body[property_name] = "example"
+
+                        elif property_type == "integer":
+                            body[property_name] = 1
+
+                        elif property_type == "boolean":
+                            body[property_name] = True
+
+                        else:
+                            body[property_name] = None
+            else:
+                body = schema.get("example")
+
 
         expected_statuses = list(endpoint.responses.keys()) if endpoint.responses else [200]
 
