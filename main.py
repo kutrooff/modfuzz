@@ -35,9 +35,7 @@ async def main():
     schema = load_schema(args.schema)
     endpoints = parse_openapi(schema)
 
-    runner = FuzzingRunner(
-        base_url=args.base_url
-    )
+    runner = FuzzingRunner(base_url=args.base_url)
 
     if args.mode == "stateful":
 

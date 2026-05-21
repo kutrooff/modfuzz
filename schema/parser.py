@@ -2,50 +2,33 @@ from typing import List, Dict
 from schema.models import Endpoint, Parameter, RequestBody, Response
 
 def parse_openapi(schema: Dict) -> List[Endpoint]:
+
+    valid_methods = {
+        "get",
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "options",
+        "head",
+    }
+
     endpoints: List[Endpoint] = []
 
     paths = schema.get("paths", {})
     for path, methods in paths.items():
         for method, info in methods.items():
-            # Параметры
-            parameters = []
-            for param in info.get("parameters", []):
-                parameters.append(
-                    Parameter(
-                        name=param.get("name"),
-                        in_=param.get("in"),
-                        type_=param.get("schema", {}).get("type", "string"),
-                        required=param.get("required", False),
-                        schema=param.get("schema", {}),
-                        example=param.get("example"),
-                    )
-                )
-            # RequestBody
-            request_body = None
-            if "requestBody" in info:
-                content = info["requestBody"].get("content", {})
-                if "application/json" in content:
-                    raw_schema = content["application/json"].get("schema", {})
+            if method.lower() not in valid_methods:
+                continue
 
-                    if "$ref" in raw_schema:
-                        schema_body = resolve_ref(raw_schema["$ref"], schema)
-                    else:
-                        schema_body = raw_schema
+            all_parameters = (methods.get("parameters", []) + info.get("parameters", []))
 
-                    request_body = RequestBody(
-                        content_type="application/json",
-                        schema=schema_body,
-                        required=info["requestBody"].get("required", True),
-                    )
-            # Responses
-            responses = {}
-            for status, resp in info.get("responses", {}).items():
-                responses[int(status)] = Response(
-                    status_code=int(status),
-                    description=resp.get("description", ""),
-                    schema=resp.get("content", {}).get("application/json", {}).get("schema", {}),
-                    content_type="application/json"
-                )
+            parameters = _parse_parameters(all_parameters)
+
+            request_body = _parse_request_body(info, schema)
+
+            responses = _parse_responses(info)
+
             # Создание Endpoint
             endpoint = Endpoint(
                 path=path,
@@ -58,14 +41,67 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
                 tags=info.get("tags", []),
             )
             endpoints.append(endpoint)
+
     return endpoints
+
+def _parse_parameters(all_parameters: List[Dict]):
+    parameters = []
+    for param in all_parameters:
+        parameters.append(
+            Parameter(
+                name=param.get("name"),
+                in_=param.get("in"),
+                type_=param.get("schema", {}).get("type", "string"),
+                required=param.get("required", False),
+                schema=param.get("schema", {}),
+                example=param.get("example"),
+            )
+        )
+
+    return parameters
+
+def _parse_request_body(info: dict, schema: dict):
+    request_body = None
+    if "requestBody" in info:
+        content = info["requestBody"].get("content", {})
+        if "application/json" in content:
+            raw_schema = content["application/json"].get("schema", {})
+
+            if "$ref" in raw_schema:
+                schema_body = resolve_ref(raw_schema["$ref"], schema)
+            else:
+                schema_body = raw_schema
+
+            request_body = RequestBody(
+                content_type="application/json",
+                schema=schema_body,
+                required=info["requestBody"].get("required", True),
+            )
+
+    return request_body
+
+def _parse_responses(info: dict):
+    responses = {}
+    for status, resp in info.get("responses", {}).items():
+        responses[status] = Response(
+            status_code=status,
+            description=resp.get("description", ""),
+            schema=resp.get("content", {}).get("application/json", {}).get("schema", {}),
+            content_type="application/json"
+        )
+
+    return responses
 
 def resolve_ref(ref: str, schema: dict):
     path = ref.replace("#/", "").split("/")
 
     current = schema
 
-    for part in path:
-        current = current[part]
+    try:
+        for part in path:
+            current = current[part]
+
+    except KeyError:
+        raise ValueError(f"Invalid OpenAPI reference: {ref}")
 
     return current

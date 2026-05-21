@@ -6,20 +6,27 @@ from execution.http_client import AsyncHttpExecutor
 from generation.examples import generate_examples
 from generation.randomized import generate_random_cases
 from reporting.console import ConsoleReporter
+from reporting.json_reporter import JsonReporter
 from schema.models import Endpoint
 from state.scenario_builder import StatefulScenarioBuilder
 from state.stateful_executor import StatefulExecutor
 from strategy.manager import AdaptiveStrategyManager
-from reporting.json_reporter import JsonReporter
+
 
 class FuzzingRunner:
 
     def __init__(self, base_url: str):
 
         self.base_url = base_url
+
         self.analyzer = ResponseAnalyzer()
-        self.strategy_manager = AdaptiveStrategyManager()
+
+        self.strategy_manager = (
+            AdaptiveStrategyManager()
+        )
+
         self.console = ConsoleReporter()
+
         self.json_reporter = JsonReporter()
 
     async def run_stateless(
@@ -65,34 +72,10 @@ class FuzzingRunner:
                     cases
                 )
 
-                for result in results:
-
-                    analysis = self.analyzer.analyze(
-                        result
-                    )
-
-                    result.analysis = analysis
-
-                    self.console.print_result(
-                        result
-                    )
-
-                    issues = analysis.get(
-                        "issues",
-                        []
-                    )
-
-                    for issue in issues:
-
-                        self.console.print_finding(
-                            issue,
-                            result
-                        )
-
-                    self.strategy_manager.update(
-                        result,
-                        analysis
-                    )
+                self._process_results(
+                    results,
+                    update_strategy=True
+                )
 
                 all_results.extend(
                     results
@@ -112,26 +95,8 @@ class FuzzingRunner:
                     )
                 )
 
-        findings_counter = Counter()
-
-        for result in all_results:
-
-            issues = result.analysis.get(
-                "issues",
-                []
-            )
-
-            for issue in issues:
-
-                findings_counter[issue] += 1
-
-        report_path = self.json_reporter.export(
-            results=all_results,
-            findings_counter=findings_counter
-        )
-
-        self.console.print_report_saved(
-            report_path
+        self._finalize_session(
+            all_results
         )
 
         return all_results
@@ -162,6 +127,8 @@ class FuzzingRunner:
             cases
         )
 
+        all_results = []
+
         async with AsyncHttpExecutor(
             self.base_url
         ) as http_executor:
@@ -169,8 +136,6 @@ class FuzzingRunner:
             executor = StatefulExecutor(
                 http_executor
             )
-
-            results = []
 
             for sequence in sequences:
 
@@ -180,53 +145,99 @@ class FuzzingRunner:
                     )
                 )
 
-                for result in sequence_results:
-
-                    analysis = self.analyzer.analyze(
-                        result
-                    )
-
-                    result.analysis = analysis
-
-                    self.console.print_result(
-                        result
-                    )
-
-                    issues = analysis.get(
-                        "issues",
-                        []
-                    )
-
-                    for issue in issues:
-
-                        self.console.print_finding(
-                            issue,
-                            result
-                        )
-
-                results.extend(
+                self._process_results(
                     sequence_results
                 )
 
-            findings_counter = Counter()
-
-            for result in results:
-
-                issues = result.analysis.get(
-                    "issues",
-                    []
+                all_results.extend(
+                    sequence_results
                 )
 
-                for issue in issues:
+        self._finalize_session(
+            all_results
+        )
 
-                    findings_counter[issue] += 1
+        return all_results
 
-            self.console.print_summary(
-                total_requests=len(results),
-                total_findings=sum(
-                    findings_counter.values()
-                ),
-                findings_counter=findings_counter
+    def _process_results(
+        self,
+        results,
+        update_strategy: bool = False
+    ):
+
+        for result in results:
+
+            analysis = self.analyzer.analyze(
+                result
             )
 
-            return results
+            result.analysis = analysis
+
+            self.console.print_result(
+                result
+            )
+
+            issues = analysis.get(
+                "issues",
+                []
+            )
+
+            for issue in issues:
+
+                self.console.print_finding(
+                    issue,
+                    result
+                )
+
+            if update_strategy:
+
+                self.strategy_manager.update(
+                    result,
+                    analysis
+                )
+
+    def _count_findings(
+        self,
+        results
+    ):
+
+        findings_counter = Counter()
+
+        for result in results:
+
+            issues = result.analysis.get(
+                "issues",
+                []
+            )
+
+            for issue in issues:
+
+                findings_counter[issue] += 1
+
+        return findings_counter
+
+    def _finalize_session(
+        self,
+        results
+    ):
+
+        findings_counter = self._count_findings(
+            results
+        )
+
+        self.console.print_summary(
+            total_requests=len(results),
+            total_findings=sum(
+                findings_counter.values()
+            ),
+            findings_counter=findings_counter
+        )
+
+        report_path = self.json_reporter.export(
+            results=results,
+            findings_counter=findings_counter
+        )
+
+        self.console.print_report_saved(
+            report_path
+        )

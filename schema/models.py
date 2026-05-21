@@ -46,7 +46,7 @@ class Response:
         content_type: MIME тип тела ответа ('application/json' по умолчанию).
         schema: Схема структуры данных ответа.
     """
-    status_code: int
+    status_code: str
     description: str = ""
     content_type: str = "application/json"
     schema: Dict[str, Any] = field(default_factory=dict)
@@ -91,10 +91,12 @@ class TestCase:
         strategy: Стратегия генерации теста ('example', 'boundary', 'random').
     """
     endpoint: Endpoint
+    # возможно вместо этого необходимо использовать case.endpoint.method
     method: str
     path_params: Dict[str, Any] = field(default_factory=dict)
     query_params: Dict[str, Any] = field(default_factory=dict)
     headers: Dict[str, Any] = field(default_factory=dict)
     body: Optional[Any] = None
     expected_statuses: List[int] = field(default_factory=list)
+    # позже можно переделать strategy в enum или отдельную модель
     strategy: str = "example"  # "example", "boundary", "random"

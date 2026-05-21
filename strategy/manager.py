@@ -8,11 +8,8 @@ class AdaptiveStrategyManager:
     def __init__(self):
 
         self.context = AdaptiveContext()
-
         self.scorer = EndpointScorer()
-
         self.policy = AdaptivePolicy()
-
         self.global_issues = []
 
     def update(self, result, analysis):

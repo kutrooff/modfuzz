@@ -1,39 +1,58 @@
 from execution.result import ExecutionResult
-
+from analysis.models import AnalysisResult
 
 class ResponseAnalyzer:
 
-    def analyze(self, result: ExecutionResult) -> dict:
-        analysis = {
-            "issues": [],
-            "severity": "info"
-        }
+
+    SEVERITY_LEVELS = {
+        "info": 1,
+        "medium": 2,
+        "high": 3,
+    }
+
+    HIDDEN_ERROR_PATTERNS = [
+        "error",
+        "exception",
+        "traceback",
+        "failed",
+    ]
+
+    INVALID_BEHAVIOR_PATTERNS = [
+        "warning",
+        "negative",
+        "accepted",
+        "debug",
+        "unsafe",
+    ]
+
+    def analyze(self, result: ExecutionResult) -> AnalysisResult:
+        analysis = AnalysisResult()
 
         self._check_server_errors(result, analysis)
         self._check_slow_response(result, analysis)
         self._check_empty_response(result, analysis)
         self._check_hidden_errors(result, analysis)
-
-        # НОВОЕ
         self._check_invalid_behavior(result, analysis)
 
         return analysis
 
-    def _check_server_errors(self, result, analysis):
+    def _set_severity(self, analysis: AnalysisResult, severity: str):
+        if self.SEVERITY_LEVELS[severity] > self.SEVERITY_LEVELS[analysis.severity]:
+            analysis.severity = severity
+
+    def _check_server_errors(self, result: ExecutionResult, analysis: AnalysisResult):
         if result.status_code is not None and result.status_code >= 500:
-            analysis["issues"].append("server_error")
-            analysis["severity"] = "high"
-
+            analysis.issues.append("server_error")
+            self._set_severity(analysis, "high")
     def _check_slow_response(self, result, analysis):
-        if result.elapsed_ms > 2000:
-            analysis["issues"].append("slow_response")
+        if (result.elapsed_ms is not None and result.elapsed_ms > 2000):
+            analysis.issues.append("slow_response")
 
-            if analysis["severity"] != "high":
-                analysis["severity"] = "medium"
+            self._set_severity(analysis, "medium")
 
-    def _check_empty_response(self, result, analysis):
+    def _check_empty_response(self, result: ExecutionResult, analysis: AnalysisResult):
         if result.response_body in (None, "", {}):
-            analysis["issues"].append("empty_response")
+            analysis.issues.append("empty_response")
 
     def _check_hidden_errors(self, result, analysis):
         if not isinstance(result.response_body, dict):
@@ -41,23 +60,15 @@ class ResponseAnalyzer:
 
         text = str(result.response_body).lower()
 
-        suspicious = [
-            "error",
-            "exception",
-            "traceback",
-            "failed",
-        ]
 
         if (
             result.status_code == 200
-            and any(word in text for word in suspicious)
+            and any(word in text for word in self.HIDDEN_ERROR_PATTERNS)
         ):
-            analysis["issues"].append("hidden_error")
+            analysis.issues.append("hidden_error")
 
-            if analysis["severity"] != "high":
-                analysis["severity"] = "medium"
+            self._set_severity(analysis, "medium")
 
-    # НОВЫЙ МЕТОД
     def _check_invalid_behavior(self, result, analysis):
 
         body = result.response_body
@@ -67,19 +78,10 @@ class ResponseAnalyzer:
 
         text = str(body).lower()
 
-        suspicious_patterns = [
-            "warning",
-            "negative",
-            "accepted",
-            "debug",
-            "unsafe",
-        ]
-
         if (
             result.status_code == 200
-            and any(pattern in text for pattern in suspicious_patterns)
+            and any(pattern in text for pattern in self.INVALID_BEHAVIOR_PATTERNS)
         ):
-            analysis["issues"].append("invalid_behavior")
+            analysis.issues.append("invalid_behavior")
 
-            if analysis["severity"] == "info":
-                analysis["severity"] = "medium"
+            self._set_severity(analysis, "medium")
