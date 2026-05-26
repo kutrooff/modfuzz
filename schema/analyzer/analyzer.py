@@ -1,5 +1,5 @@
 from typing import Dict, List
-from schema_analysis.validators import (validate_responses, validate_paths,
+from schema.analyzer.validators import (validate_responses, validate_paths,
                                         validate_request_bodies, validate_parameters)
 
 class SchemaAnalyzer:

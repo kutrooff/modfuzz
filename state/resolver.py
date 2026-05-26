@@ -24,7 +24,7 @@ class StateResolver:
 
         return case
 
-    def _resolve_mapping(self, data: dict) -> dict:
+    def _resolve_mapping(self, data: dict | None) -> dict:
 
         resolved = {}
 
@@ -35,7 +35,7 @@ class StateResolver:
 
     def _resolve_value(self, value: Any) -> Any:
         if isinstance(value, str) and value.startswith("$state."):
-            state_key = value.replace("$state.", "", 1)
+            state_key = value.removeprefix("$state.")
             state_value = self.state.get(state_key)
             return state_value if state_value is not None else value
 

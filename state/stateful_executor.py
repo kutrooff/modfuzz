@@ -52,17 +52,29 @@ class StatefulExecutor:
                 key=key,
                 value=value,
                 source_path=result.case.endpoint.path,
-                source_method=result.case.method,
+                source_method=case.endpoint.method,
                 source_field=key.split(".")[-1],
             )
 
         return result
 
     async def run_sequence(self, cases: List[TestCase]) -> List[ExecutionResult]:
-        results = []
+        results: List[ExecutionResult] = []
+        self.state_manager.clear()
 
         for case in cases:
-            result = await self.run_case(case)
+            try:
+                result = await self.run_case(case)
+
+            except Exception:
+                break
+
             results.append(result)
+
+            if result.status_code is None:
+                break
+
+            if result.status_code >= 500:
+                break
 
         return results

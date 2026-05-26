@@ -4,7 +4,7 @@ from state.models import StateValue
 
 class StateManager:
     def __init__(self):
-        self.values: Dict[str, Any] = {}
+        self.values: Dict[str, StateValue] = {}
 
     def save(self,
              key: str,
@@ -33,3 +33,9 @@ class StateManager:
 
     def clear(self) -> None:
         self.values.clear()
+
+    def get_state(
+            self,
+            key: str,
+    ) -> Optional[StateValue]:
+        return self.values.get(key)

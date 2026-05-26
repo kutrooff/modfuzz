@@ -60,10 +60,7 @@ class DependencyAnalyzer:
         if endpoint.method.upper() not in self.PRODUCER_METHODS:
             return False
 
-        return any(
-            200 <= status < 300
-            for status in endpoint.responses.keys()
-        )
+        return self._has_success_response(endpoint)
 
     def _is_consumer(self, endpoint: Endpoint) -> bool:
         if endpoint.method.upper() not in self.CONSUMER_METHODS:
@@ -75,3 +72,15 @@ class DependencyAnalyzer:
         parts = [part for part in path.split("/") if part and not part.startswith("{")]
 
         return parts[0] if parts else "resource"
+
+    def _has_success_response(self,endpoint: Endpoint,) -> bool:
+
+        for status in endpoint.responses.keys():
+
+            if not str(status).isdigit():
+                continue
+
+            if 200 <= int(status) < 300:
+                return True
+
+        return False

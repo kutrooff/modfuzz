@@ -1,40 +1,69 @@
 from typing import List
+from copy import deepcopy
 
 from schema.models import Endpoint, TestCase
 from state.dependencies import DependencyAnalyzer
-
+from models import OperationLink
 
 class StatefulScenarioBuilder:
     def __init__(self):
         self.dependency_analyzer = DependencyAnalyzer()
 
     def build_sequences(self, test_cases: List[TestCase]) -> List[List[TestCase]]:
+
         endpoints = [case.endpoint for case in test_cases]
         graph = self.dependency_analyzer.analyze(endpoints)
 
         sequences: List[List[TestCase]] = []
 
         for link in graph.links:
-            source_case = self._find_case(test_cases, link.source)
-            target_case = self._find_case(test_cases, link.target)
+
+            source_case = self._find_case(test_cases,link.source)
+            target_case = self._find_case(test_cases,link.target)
 
             if source_case is None or target_case is None:
                 continue
 
-            target_case.path_params[link.target_param] = (
-                f"$state.{self._resource_name(link.source.path)}.last_id"
-            )
+            source_case = deepcopy(source_case)
+            target_case = deepcopy(target_case)
 
-            sequences.append([source_case, target_case])
+            self._inject_path_state(target_case, link)
+
+            sequence = [source_case, target_case]
+
+            sequences.append(sequence)
+
+            next_links = graph.consumers_for(link.target)
+
+            for next_link in next_links:
+
+                next_case = self._find_case(test_cases, next_link.target)
+
+                if next_case is None:
+                    continue
+
+                next_case = deepcopy(next_case)
+
+                self._inject_path_state(next_case, next_link)
+
+                sequences.append([source_case, target_case, next_case])
 
         return sequences
 
+
+    def _inject_path_state(self, case: TestCase, link: OperationLink) -> None:
+        if case.path_params is None:
+            case.path_params = {}
+
+        case.path_params[link.target_param] = self._build_state_reference(link)
+
+    def _build_state_reference(self, link: OperationLink) -> str:
+        resource_name = self._resource_name(link.source.path)
+        return f"$state.{resource_name}.{link.source_field}"
+
     def _find_case(self, cases: List[TestCase], endpoint: Endpoint) -> TestCase | None:
         for case in cases:
-            if (
-                case.endpoint.path == endpoint.path
-                and case.endpoint.method == endpoint.method
-            ):
+            if case.endpoint.path == endpoint.path and case.endpoint.method == endpoint.method:
                 return case
         return None
 

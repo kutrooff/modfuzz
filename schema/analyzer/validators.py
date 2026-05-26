@@ -15,7 +15,7 @@ def validate_paths(paths: Dict) -> List[str]:
 
 def validate_parameters(parameters: List[Dict], path: str, method: str) -> List[str]:
     """
-    Проверяет корректность HTTP запроса.
+    Проверяет корректность HTTP запроса.F
 
     :param parameters: Список словарей параметров из схемы.
     :param path: URL путь endpoint
