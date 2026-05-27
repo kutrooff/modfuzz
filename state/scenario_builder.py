@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from schema.models import Endpoint, TestCase
 from state.dependencies import DependencyAnalyzer
-from models import OperationLink
+from state.models import OperationLink
 
 class StatefulScenarioBuilder:
     def __init__(self):

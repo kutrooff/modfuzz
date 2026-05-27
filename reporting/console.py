@@ -208,6 +208,6 @@ class ConsoleReporter:
         self.console.print()
 
         self.console.print(
-            f"[bold green]JSON report saved:[/bold green] "
+            f"[bold green]JSON отчёт сохранён в :[/bold green] "
             f"{report_path}"
         )

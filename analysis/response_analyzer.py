@@ -51,6 +51,10 @@ class ResponseAnalyzer:
             self._set_severity(analysis, "medium")
 
     def _check_empty_response(self, result: ExecutionResult, analysis: AnalysisResult):
+
+        if result.status_code == 204:
+            return
+
         if result.response_body in (None, "", {}):
             analysis.issues.append("empty_response")
 

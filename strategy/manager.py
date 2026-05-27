@@ -31,9 +31,7 @@ class AdaptiveStrategyManager:
         )
 
         self.global_issues.extend(
-            analysis.get("issues", [])
-        )
-
+            analysis.issues)
     def get_global_issues(self):
 
         return list(set(self.global_issues))

@@ -1,16 +1,17 @@
 from collections import Counter
+from copy import deepcopy
 from typing import List
 
 from analysis.response_analyzer import ResponseAnalyzer
 from execution.http_client import AsyncHttpExecutor
 from generation.examples import generate_examples
-from generation.randomized import generate_random_cases
+from generation.randomized import generate_random_cases, mutation_engine
 from reporting.console import ConsoleReporter
 from reporting.json_reporter import JsonReporter
 from schema.models import Endpoint
 from state.scenario_builder import StatefulScenarioBuilder
+from execution.executor import Executor
 from state.stateful_executor import StatefulExecutor
-from strategy.manager import AdaptiveStrategyManager
 
 
 class FuzzingRunner:
@@ -21,25 +22,79 @@ class FuzzingRunner:
 
         self.analyzer = ResponseAnalyzer()
 
-        self.strategy_manager = (
-            AdaptiveStrategyManager()
-        )
-
         self.console = ConsoleReporter()
 
         self.json_reporter = JsonReporter()
 
-    async def run_stateless(
-        self,
-        endpoints: List[Endpoint]
-    ):
+    async def run_stateless(self,endpoints: List[Endpoint]):
 
         all_results = []
 
-        mutations = ["random"]
+        mutations = [
+            "sql_injection",
+            "xss",
+            "boundary",
+        ]
 
         async with AsyncHttpExecutor(
             self.base_url
+        ) as http_executor:
+
+            executor = Executor(http_executor)
+
+            for iteration in range(3):
+
+                self.console.print_iteration(
+                    iteration=iteration + 1,
+                    mutations=mutations)
+
+                cases = []
+
+                cases.extend(generate_examples(endpoints))
+
+                cases.extend(
+                    generate_random_cases(
+                        endpoints,
+                        mutations=mutations
+                    )
+                )
+
+                results = await executor.run_cases(cases)
+
+                self._process_results(results)
+
+                all_results.extend(results)
+
+        self._finalize_session(all_results)
+
+        return all_results
+
+    async def run_stateful(
+            self,
+            endpoints: List[Endpoint],
+    ):
+
+
+        all_results = []
+
+        mutations = [
+            "sql_injection",
+            "xss",
+            "boundary",
+        ]
+
+        builder = StatefulScenarioBuilder()
+
+        base_cases = generate_examples(
+            endpoints
+        )
+
+        sequences = builder.build_sequences(
+            base_cases
+        )
+
+        async with AsyncHttpExecutor(
+                self.base_url
         ) as http_executor:
 
             executor = StatefulExecutor(
@@ -50,50 +105,42 @@ class FuzzingRunner:
 
                 self.console.print_iteration(
                     iteration=iteration + 1,
-                    mutations=mutations
+                    mutations=mutations,
                 )
 
-                cases = []
+                for sequence in sequences:
 
-                cases.extend(
-                    generate_examples(
-                        endpoints
-                    )
-                )
+                    mutated_sequence = []
 
-                cases.extend(
-                    generate_random_cases(
-                        endpoints,
-                        mutations=mutations
-                    )
-                )
+                    for case in sequence:
 
-                results = await executor.run_sequence(
-                    cases
-                )
+                        mutated_case = deepcopy(case)
 
-                self._process_results(
-                    results,
-                    update_strategy=True
-                )
-
-                all_results.extend(
-                    results
-                )
-
-                mutations = (
-                    self.strategy_manager
-                    .policy
-                    .select_mutations(
-                        self.strategy_manager.context,
-                        {
-                            "issues": (
-                                self.strategy_manager
-                                .get_global_issues()
+                        if mutated_case.body:
+                            mutated_case.body = (
+                                mutation_engine.apply_mutations(
+                                    mutated_case.body,
+                                    mutations,
+                                )
                             )
-                        }
+
+                        mutated_sequence.append(
+                            mutated_case
+                        )
+
+                    sequence_results = (
+                        await executor.run_sequence(
+                            mutated_sequence
+                        )
                     )
-                )
+
+                    self._process_results(
+                        sequence_results
+                    )
+
+                    all_results.extend(
+                        sequence_results
+                    )
 
         self._finalize_session(
             all_results
@@ -101,75 +148,12 @@ class FuzzingRunner:
 
         return all_results
 
-    async def run_stateful(
-        self,
-        endpoints: List[Endpoint]
-    ):
 
-        cases = []
-
-        cases.extend(
-            generate_examples(
-                endpoints
-            )
-        )
-
-        cases.extend(
-            generate_random_cases(
-                endpoints,
-                n=1
-            )
-        )
-
-        builder = StatefulScenarioBuilder()
-
-        sequences = builder.build_sequences(
-            cases
-        )
-
-        all_results = []
-
-        async with AsyncHttpExecutor(
-            self.base_url
-        ) as http_executor:
-
-            executor = StatefulExecutor(
-                http_executor
-            )
-
-            for sequence in sequences:
-
-                sequence_results = (
-                    await executor.run_sequence(
-                        sequence
-                    )
-                )
-
-                self._process_results(
-                    sequence_results
-                )
-
-                all_results.extend(
-                    sequence_results
-                )
-
-        self._finalize_session(
-            all_results
-        )
-
-        return all_results
-
-    def _process_results(
-        self,
-        results,
-        update_strategy: bool = False
-    ):
+    def _process_results(self, results):
 
         for result in results:
 
-            analysis = self.analyzer.analyze(
-                result
-            )
+            analysis = result.analysis
 
             result.analysis = analysis
 
@@ -177,23 +161,13 @@ class FuzzingRunner:
                 result
             )
 
-            issues = analysis.get(
-                "issues",
-                []
-            )
+            issues = analysis.issues
 
             for issue in issues:
 
                 self.console.print_finding(
                     issue,
                     result
-                )
-
-            if update_strategy:
-
-                self.strategy_manager.update(
-                    result,
-                    analysis
                 )
 
     def _count_findings(
@@ -205,10 +179,7 @@ class FuzzingRunner:
 
         for result in results:
 
-            issues = result.analysis.get(
-                "issues",
-                []
-            )
+            issues = result.analysis.issues
 
             for issue in issues:
 

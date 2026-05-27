@@ -15,7 +15,7 @@ class EndpointScorer:
 
         stats.total_requests += 1
 
-        issues = analysis.get("issues", [])
+        issues = analysis.issues
 
         if "server_error" in issues:
             stats.server_errors += 1

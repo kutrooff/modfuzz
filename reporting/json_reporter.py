@@ -84,15 +84,10 @@ class JsonReporter:
                 result.success,
 
             "issues":
-                result.analysis.get(
-                    "issues",
-                    []
-                ),
+                result.analysis.issues,
 
             "severity":
-                result.analysis.get(
-                    "severity"
-                ),
+                result.analysis.severity,
 
             "request": {
 

@@ -1,10 +1,10 @@
 from strategy.adaptive_context import AdaptiveContext
-
+from analysis.models import AnalysisResult
 
 class AdaptivePolicy:
 
-    def apply(self, context: AdaptiveContext, analysis: dict):
-        issues = analysis.get("issues", [])
+    def apply(self, context: AdaptiveContext, analysis: AnalysisResult):
+        issues = analysis.issues
 
         if "server_error" in issues:
             context.mutation_intensity += 1
@@ -15,9 +15,9 @@ class AdaptivePolicy:
         if "hidden_error" in issues:
             context.repeat_failed_cases = True
 
-    def select_mutations(self, context, analysis):
+    def select_mutations(self, context, analysis: AnalysisResult):
 
-        issues = analysis.get("issues", [])
+        issues = analysis.issues
 
         mutations = []
 
