@@ -29,7 +29,10 @@ class StatefulScenarioBuilder:
 
             self._inject_path_state(target_case, link)
 
-            sequence = [source_case, target_case]
+            sequence = self._prepend_auth_if_needed(
+                [source_case, target_case],
+                test_cases,
+            )
 
             sequences.append(sequence)
 
@@ -46,7 +49,9 @@ class StatefulScenarioBuilder:
 
                 self._inject_path_state(next_case, next_link)
 
-                sequences.append([source_case, target_case, next_case])
+                extended_sequence = self._prepend_auth_if_needed([source_case,target_case,next_case], test_cases)
+
+                sequences.append(extended_sequence)
 
         return sequences
 
@@ -70,3 +75,51 @@ class StatefulScenarioBuilder:
     def _resource_name(self, path: str) -> str:
         parts = [part for part in path.split("/") if part and not part.startswith("{")]
         return parts[0] if parts else "resource"
+
+    def _find_login_case(self, test_cases: List[TestCase]) -> TestCase | None:
+
+        for case in test_cases:
+
+            if case.endpoint.path == "/login":
+                return deepcopy(case)
+
+        return None
+
+    def _is_auth_endpoint(self, endpoint: Endpoint):
+
+        auth_paths = {
+            "/login",
+            "/auth/login",
+            "signin",
+        }
+
+        return endpoint.path in auth_paths
+
+    def _prepend_auth_if_needed(
+            self,
+            sequence: List[TestCase],
+            test_cases: List[TestCase],
+    ) -> List[TestCase]:
+
+        requires_auth = any(
+            case.endpoint.requires_auth
+            for case in sequence
+        )
+
+        if not requires_auth:
+            return sequence
+
+        if sequence[0].endpoint.path == "/login":
+            return sequence
+
+        login_case = self._find_login_case(
+            test_cases
+        )
+
+        if login_case:
+            sequence.insert(
+                0,
+                login_case,
+            )
+
+        return sequence

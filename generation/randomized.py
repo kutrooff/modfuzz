@@ -90,7 +90,14 @@ def generate_random_cases(endpoints: List[Endpoint], n: int = 3, mutations=None)
         for _ in range(n):
             path_params = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "path"}
             query_params = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "query"}
-            headers = {p.name: random_value(p.type_) for p in endpoint.parameters if p.in_ == "header"}
+            headers = {
+                p.name: random_value(p.type_)
+                for p in endpoint.parameters
+                if p.in_ == "header"
+            }
+            if endpoint.requires_auth:
+                headers["Authorization"] = "Bearer $state.auth.token"
+
             body = (
                 generate_from_schema(endpoint.request_body.schema)
                 if endpoint.request_body

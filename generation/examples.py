@@ -2,6 +2,11 @@ from typing import List
 
 from schema.models import Endpoint, TestCase
 
+LOGIN_EXAMPLES = {
+    "username": "admin",
+    "password": "admin"
+}
+
 def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
     """
     Генерирует тестовые случаи (TestCase) из примеров, указанных в OpenAPI
@@ -25,9 +30,21 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
             elif param.in_ == "header":
                 headers[param.name] = example_value
 
+        if endpoint.requires_auth:
+
+            headers["Authorization"] = (
+                "Bearer $state.auth.token"
+            )
+
         body = None
+
+        if endpoint.path == "/login":
+            body = LOGIN_EXAMPLES
+
         if endpoint.request_body:
             schema = endpoint.request_body.schema
+
+
 
             if schema.get("type") == "object":
                 body = {}
@@ -54,8 +71,11 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
             else:
                 body = schema.get("example")
 
-
-        expected_statuses = list(endpoint.responses.keys()) if endpoint.responses else [200]
+        expected_statuses = (
+            [int(code) for code in endpoint.responses.keys()]
+            if endpoint.responses
+            else [200]
+        )
 
         test_case = TestCase(
             endpoint=endpoint,

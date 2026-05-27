@@ -31,6 +31,13 @@ class StateManager:
     def all(self) -> List[StateValue]:
         return list(self.values.values())
 
+    def as_dict(self) -> dict[str, Any]:
+
+        return {
+            key: state.value
+            for key, state in self.values.items()
+        }
+
     def clear(self) -> None:
         self.values.clear()
 

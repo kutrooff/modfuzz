@@ -17,14 +17,17 @@ class StateResolver:
         case.query_params = self._resolve_mapping(case.query_params)
         case.headers = self._resolve_mapping(case.headers)
 
-        if isinstance(case.body, dict):
-            case.body = self._resolve_mapping(case.body)
+        if case.body is not None:
+            case.body = self._resolve_value(case.body)
 
         self._auto_resolve_path_params(case)
 
         return case
 
     def _resolve_mapping(self, data: dict | None) -> dict:
+
+        if not data:
+            return {}
 
         resolved = {}
 
@@ -34,10 +37,19 @@ class StateResolver:
         return resolved
 
     def _resolve_value(self, value: Any) -> Any:
-        if isinstance(value, str) and value.startswith("$state."):
-            state_key = value.removeprefix("$state.")
-            state_value = self.state.get(state_key)
-            return state_value if state_value is not None else value
+
+        if isinstance(value, str):
+
+            for state_key, state_value in self.state.as_dict().items():
+
+                placeholder = (
+                    f"$state.{state_key}"
+                )
+
+                if placeholder in value:
+                    value = value.replace(placeholder, str(state_value))
+
+            return value
 
         if isinstance(value, dict):
             return self._resolve_mapping(value)

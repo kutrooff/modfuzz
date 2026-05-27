@@ -39,6 +39,7 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
                 request_body=request_body,
                 responses=responses,
                 tags=info.get("tags", []),
+                requires_auth=_requires_auth(info)
             )
             endpoints.append(endpoint)
 
@@ -105,3 +106,6 @@ def resolve_ref(ref: str, schema: dict):
         raise ValueError(f"Invalid OpenAPI reference: {ref}")
 
     return current
+
+def _requires_auth(info: dict) -> bool:
+    return bool(info.get("security"))
