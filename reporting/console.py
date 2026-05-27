@@ -1,51 +1,31 @@
 from rich.console import Console
 
 class ConsoleReporter:
-
+    FINDING_LABELS = {"server_error": "Ошибка сервера",
+                      "invalid_behavior": "Некорректное поведение",
+                      "hidden_error": "Скрытая ошибка",
+                      "empty_response": "Пустой ответ", }
 
     def __init__(self):
 
         self.console = Console()
 
-    # =====================================================
-    # ITERATION
-    # =====================================================
-
-    def print_iteration(
-        self,
-        iteration: int,
-        mutations: list[str]
-    ):
+    def print_iteration(self, iteration: int, mutations: list[str]):
 
         self.console.print()
 
-        self.console.rule(
-            f"[bold cyan]FUZZING ITERATION {iteration}"
-        )
+        self.console.rule(f"[bold cyan]ФАЗЗИНГ ИТЕРАЦИЯ {iteration}")
 
-        self.console.print(
-            "[bold white]ACTIVE MUTATIONS:[/bold white]",
-            f"[magenta]{mutations}[/magenta]"
-        )
+        self.console.print("[bold white]АКТИВНЫЕ МУТАЦИИ:[/bold white]", f"[magenta]{mutations}[/magenta]")
 
         self.console.print()
 
-    # =====================================================
-    # TEST RESULT
-    # =====================================================
 
-    def print_result(
-        self,
-        result
-    ):
+    def print_result(self, result):
 
-        status_style = self._status_style(
-            result.status_code
-        )
+        status_style = self._status_style(result.status_code)
 
-        method_style = self._method_style(
-            result.case.method
-        )
+        method_style = self._method_style(result.case.method)
 
         result_style = (
             "green"
@@ -68,33 +48,25 @@ class ConsoleReporter:
             f"[/{method_style}] "
             f"{result.case.endpoint.path:<35} "
             f"[{result_style}]"
-            f"{'OK' if result.success else 'FAILED'}"
+            f"{'УСПЕШНО' if result.success else 'ОШИБКА'}"
             f"[/{result_style}]"
         )
 
-    # =====================================================
-    # FINDING
-    # =====================================================
 
-    def print_finding(
-        self,
-        issue_type: str,
-        result
-    ):
+    def print_finding(self, issue_type: str, result):
 
         style = {
             "server_error": "bold red",
             "invalid_behavior": "yellow",
             "hidden_error": "magenta",
             "empty_response": "cyan",
-        }.get(
-            issue_type,
-            "white"
-        )
+        }.get(issue_type,"white")
+
+        label = self.FINDING_LABELS.get(issue_type, issue_type)
 
         self.console.print(
             f"[{style}]"
-            f"[!] {issue_type.upper()}"
+            f"[!] {label.upper()}"
             f"[/{style}]"
         )
 
@@ -105,9 +77,6 @@ class ConsoleReporter:
             f"{result.status_code}"
         )
 
-        # OPTIONAL:
-        # SHOW ERROR
-
         if result.error:
 
             self.console.print(
@@ -116,9 +85,6 @@ class ConsoleReporter:
 
         self.console.print()
 
-    # =====================================================
-    # FINAL SUMMARY
-    # =====================================================
 
     def print_summary(
         self,
@@ -128,22 +94,21 @@ class ConsoleReporter:
     ):
 
         self.console.print()
-
-        self.console.rule(
-            "[bold cyan]SESSION SUMMARY"
-        )
+        self.console.rule("[bold cyan]СВОДКА СЕССИИ")
 
         self.console.print(
-            f"[bold]Total Requests:[/bold] "
+            f"[bold]Всего запросов:[/bold] "
             f"{total_requests}"
         )
 
         self.console.print(
-            f"[bold]Total Findings:[/bold] "
+            f"[bold]Найдено проблем:[/bold] "
             f"{total_findings}"
         )
 
         self.console.print()
+
+        self.console.print("[bold]Типы проблем:[/bold]")
 
         for issue, count in findings_counter.items():
 
@@ -153,9 +118,11 @@ class ConsoleReporter:
                 else "green"
             )
 
+            label = self.FINDING_LABELS.get(issue, issue)
+
             self.console.print(
                 f"[{style}]"
-                f"{issue}: {count}"
+                f"{label}: {count}"
                 f"[/{style}]"
             )
 
@@ -163,10 +130,7 @@ class ConsoleReporter:
     # HELPERS
     # =====================================================
 
-    def _status_style(
-        self,
-        status_code
-    ):
+    def _status_style(self, status_code):
 
         if status_code is None:
             return "bold red"
@@ -200,10 +164,7 @@ class ConsoleReporter:
             "white"
         )
 
-    def print_report_saved(
-            self,
-            report_path
-    ):
+    def print_report_saved(self, report_path):
 
         self.console.print()
 

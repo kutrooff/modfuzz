@@ -65,7 +65,7 @@ class FuzzingRunner:
 
                 all_results.extend(results)
 
-        self._finalize_session(all_results)
+        self._finalize_session(all_results, mode="stateless")
 
         return all_results
 
@@ -143,7 +143,8 @@ class FuzzingRunner:
                     )
 
         self._finalize_session(
-            all_results
+            all_results,
+            mode="stateful"
         )
 
         return all_results
@@ -189,7 +190,8 @@ class FuzzingRunner:
 
     def _finalize_session(
         self,
-        results
+        results,
+        mode
     ):
 
         findings_counter = self._count_findings(
@@ -206,7 +208,8 @@ class FuzzingRunner:
 
         report_path = self.json_reporter.export(
             results=results,
-            findings_counter=findings_counter
+            findings_counter=findings_counter,
+            mode=mode
         )
 
         self.console.print_report_saved(

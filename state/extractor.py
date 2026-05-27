@@ -30,17 +30,11 @@ class StateExtractor:
 
         return extracted
 
-    def _extract_from_body(
-        self,
-        result: ExecutionResult,
-        extracted: Dict[str, Any],
-    ) -> None:
+    def _extract_from_body(self, result: ExecutionResult, extracted: Dict[str, Any]) -> None:
 
         body = result.response_body
 
-        resource_name = self._resource_name_from_path(
-            result.case.endpoint.path
-        )
+        resource_name = self._resource_name_from_path(result.case.endpoint.path)
 
         if isinstance(body, dict):
             self._extract_from_dict(

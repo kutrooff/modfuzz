@@ -4,6 +4,9 @@ from schema.models import Endpoint
 
 @dataclass
 class StateValue:
+    """
+    Описывает значение текущего состояния
+    """
     key: str
     value: Any
     source_path: str

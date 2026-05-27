@@ -10,6 +10,7 @@ class JsonReporter:
         self,
         results,
         findings_counter,
+        mode: str,
         output_dir="reports"
     ):
 
@@ -17,14 +18,11 @@ class JsonReporter:
             exist_ok=True
         )
 
-        timestamp = datetime.now().strftime(
-            "%Y%m%d_%H%M%S"
-        )
+        timestamp = datetime.now().strftime("%H-%M-%S_%d-%m-%Y")
 
-        report_path = (
-            Path(output_dir)
-            / f"report_{timestamp}.json"
-        )
+        report_name = (f"{mode}-report-{timestamp}.json")
+
+        report_path = (Path(output_dir) / report_name)
 
         report = {
 
