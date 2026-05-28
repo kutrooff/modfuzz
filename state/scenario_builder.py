@@ -80,7 +80,7 @@ class StatefulScenarioBuilder:
 
         for case in test_cases:
 
-            if case.endpoint.path == "/login":
+            if self._is_auth_endpoint(case.endpoint):
                 return deepcopy(case)
 
         return None
@@ -90,10 +90,12 @@ class StatefulScenarioBuilder:
         auth_paths = {
             "/login",
             "/auth/login",
-            "signin",
+            "/signin",
+            "/users/login",
+            "/auth/signin",
         }
 
-        return endpoint.path in auth_paths
+        return endpoint.path.lower() in auth_paths
 
     def _prepend_auth_if_needed(
             self,

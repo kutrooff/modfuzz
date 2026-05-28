@@ -78,6 +78,7 @@ class StateExtractor:
 
             if field_name in self.TOKEN_FIELDS:
                 extracted[f"auth.{field_name}"] = value
+                extracted["auth.token"] = value
 
     def _extract_from_headers(
         self,

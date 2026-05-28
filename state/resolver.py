@@ -22,7 +22,26 @@ class StateResolver:
 
         self._auto_resolve_path_params(case)
 
+        self._inject_auth_header(case)
+
         return case
+
+    def _inject_auth_header(self, case: TestCase) -> None:
+
+        if not case.endpoint.requires_auth:
+            return
+
+        token = (self.state.get("auth.token") or self.state.get("auth.access_token"))
+
+        if not token:
+            return
+
+        if case.headers is None:
+            case.headers = {}
+
+        case.headers["Authorization"] = (
+            f"Bearer {token}"
+        )
 
     def _resolve_mapping(self, data: dict | None) -> dict:
 
