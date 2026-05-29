@@ -1,0 +1,87 @@
+iterations: 2
+seed: 44
+
+generators:
+  - example
+  - random
+  - boundary
+
+mutations:
+  - sql_injection
+  - xss
+  - boundary_values
+
+mutation_options:
+  sql_injection:
+    payloads:
+      - "' OR 1=1 --"
+      - "'; DROP TABLE users; --"
+      - "\" OR \"1\"=\"1"
+
+  xss:
+    payloads:
+      - "<script>alert(1)</script>"
+      - "<img src=x onerror=alert(1)>"
+      - "<svg/onload=alert(1)>"
+
+  boundary_values:
+    numbers:
+      - -1
+      - 0
+      - 1
+      - 2147483647
+      - -2147483648
+
+  large_payload:
+    string_repeat: 1000
+    array_repeat: 100
+    integer_value: 10000000000
+
+  random:
+    min_length: 100
+    max_length: 500
+
+  deep_json:
+    depth: 20
+
+  invalid_types:
+    values:
+      - "not_an_integer"
+      - "true"
+      - "invalid"
+
+# Endpoint overrides can replace the active mutation list and refine options.
+# Example:
+# overrides:
+#   - endpoint: "PATCH /users/{userId}"
+#     mutations:
+#       - large_payload
+#     mutation_options:
+#       large_payload:
+#         string_repeat: 250
+#     locations:
+#       body: true
+#       query: false
+#       path: false
+#       headers: false
+
+target_methods:
+  - POST
+  - PATCH
+  - GET
+  - DELETE
+
+exclude_paths:
+  - /health
+
+locations:
+  body: true
+  query: true
+  path: false
+  headers: false
+
+stateful:
+  mutate_setup_requests: false
+  mutate_target_requests: true
+  mutate_verification_requests: true
+  mutate_cleanup_requests: false

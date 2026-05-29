@@ -1,0 +1,30 @@
+# виртуальное окружение
+.venv/
+venv/
+ENV/
+env/
+
+# python кэш и временные файлы
+__pycache__/
+*.py[cod]
+*$py.class
+
+# логи
+*.log
+
+# файлы отчетов
+*.csv
+*.json
+*.html
+*.xml
+*.db
+
+# IDE / редакторы
+.vscode/
+.idea/
+
+# спецификации API
+*.yaml
+*.yml
+!examples/*.yaml
+!examples/*.yml

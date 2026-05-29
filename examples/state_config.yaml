@@ -1,0 +1,88 @@
+links:
+  - source: "POST /auth/login"
+    target: "POST /products"
+    extract: "$.token"
+    save_as: "auth.token"
+    inject:
+      location: "header"
+      name: "Authorization"
+
+  - source: "POST /products"
+    target: "GET /inventory/{productId}"
+    extract: "$.id"
+    save_as: "products.id"
+    inject:
+      location: "path"
+      name: "productId"
+
+  - source: "POST /products"
+    target: "PATCH /inventory/{productId}"
+    extract: "$.id"
+    save_as: "products.id"
+    inject:
+      location: "path"
+      name: "productId"
+
+  - source: "POST /users"
+    target: "POST /orders"
+    extract: "$.id"
+    save_as: "users.id"
+    inject:
+      location: "body"
+      name: "userId"
+
+  - source: "POST /products"
+    target: "POST /orders"
+    extract: "$.id"
+    save_as: "products.id"
+    inject:
+      location: "body"
+      name: "productId"
+
+  - source: "POST /orders"
+    target: "POST /payments"
+    extract: "$.id"
+    save_as: "orders.id"
+    inject:
+      location: "body"
+      name: "orderId"
+
+  - source: "POST /orders"
+    target: "POST /shipments"
+    extract: "$.id"
+    save_as: "orders.id"
+    inject:
+      location: "body"
+      name: "orderId"
+
+  - source: "POST /payments"
+    target: "POST /shipments"
+    extract: "$.orderId"
+    save_as: "orders.id"
+    inject:
+      location: "body"
+      name: "orderId"
+
+  - source: "POST /payments"
+    target: "GET /payments/{paymentId}"
+    extract: "$.id"
+    save_as: "payments.id"
+    inject:
+      location: "path"
+      name: "paymentId"
+
+  - source: "POST /shipments"
+    target: "GET /shipments/{shipmentId}"
+    extract: "$.id"
+    save_as: "shipments.id"
+    inject:
+      location: "path"
+      name: "shipmentId"
+
+  - source: "POST /shipments"
+    target: "PATCH /shipments/{shipmentId}"
+    extract: "$.id"
+    save_as: "shipments.id"
+    inject:
+      location: "path"
+      name: "shipmentId"
