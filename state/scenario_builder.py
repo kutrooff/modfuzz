@@ -25,6 +25,11 @@ class StatefulScenarioBuilder:
             )
 
         sequences = [
+            self._prepend_prerequisites(sequence, test_cases, graph)
+            for sequence in sequences
+        ]
+
+        sequences = [
             self._prepend_auth_if_needed(sequence, test_cases)
             for sequence in sequences
         ]
@@ -94,7 +99,7 @@ class StatefulScenarioBuilder:
         if not requires_auth:
             return sequence
 
-        if self._is_auth_endpoint(sequence[0].endpoint):
+        if any(self._is_auth_endpoint(case.endpoint) for case in sequence):
             return sequence
 
         login_case = self._find_login_case(
@@ -109,6 +114,85 @@ class StatefulScenarioBuilder:
             )
 
         return sequence
+
+    def _prepend_prerequisites(
+            self,
+            sequence: List[TestCase],
+            test_cases: List[TestCase],
+            graph,
+    ) -> List[TestCase]:
+        planned: List[TestCase] = []
+
+        for case in sequence:
+            self._append_prerequisites(
+                case=case,
+                planned=planned,
+                test_cases=test_cases,
+                graph=graph,
+                visiting=set(),
+            )
+
+            planned.append(case)
+
+        return planned
+
+    def _append_prerequisites(
+            self,
+            case: TestCase,
+            planned: List[TestCase],
+            test_cases: List[TestCase],
+            graph,
+            visiting: set[tuple[str, str]],
+    ) -> None:
+        case_key = self._endpoint_key(case.endpoint)
+
+        if case_key in visiting:
+            return
+
+        visiting.add(case_key)
+
+        for link in graph.producers_for(case.endpoint):
+            source_key = self._endpoint_key(link.source)
+
+            if source_key == case_key:
+                continue
+
+            if self._contains_endpoint(planned, link.source):
+                continue
+
+            source_case = self._find_case(test_cases, link.source)
+
+            if source_case is None:
+                continue
+
+            source_case = deepcopy(source_case)
+            source_case.role = "setup"
+
+            self._append_prerequisites(
+                case=source_case,
+                planned=planned,
+                test_cases=test_cases,
+                graph=graph,
+                visiting=visiting,
+            )
+
+            if not self._contains_endpoint(planned, source_case.endpoint):
+                planned.append(source_case)
+
+        visiting.remove(case_key)
+
+    def _contains_endpoint(
+            self,
+            cases: List[TestCase],
+            endpoint: Endpoint,
+    ) -> bool:
+        return any(
+            self._endpoint_key(case.endpoint) == self._endpoint_key(endpoint)
+            for case in cases
+        )
+
+    def _endpoint_key(self, endpoint: Endpoint) -> tuple[str, str]:
+        return endpoint.method.upper(), endpoint.path
 
     def _build_dependency_pair_sequences(
             self,
@@ -255,3 +339,4 @@ class StatefulScenarioBuilder:
             (case.endpoint.method, case.endpoint.path)
             for case in sequence
         )
+

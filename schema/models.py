@@ -99,6 +99,6 @@ class TestCase:
     headers: Dict[str, Any] = field(default_factory=dict)
     body: Optional[Any] = None
     expected_statuses: List[int] = field(default_factory=list)
-    # позже можно переделать strategy в enum или отдельную модель
     strategy: str = "example"  # "example", "boundary", "random"
     role: str = "target"  # "setup", "target", "verification", "cleanup"
+    applied_mutations: List[str] = field(default_factory=list)

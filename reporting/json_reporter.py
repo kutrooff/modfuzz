@@ -75,6 +75,15 @@ class JsonReporter:
             "path":
                 result.case.endpoint.path,
 
+            "role":
+                getattr(result.case, "role", "target"),
+
+            "strategy":
+                getattr(result.case, "strategy", "unknown"),
+
+            "applied_mutations":
+                getattr(result.case, "applied_mutations", []),
+
             "status_code":
                 result.status_code,
 

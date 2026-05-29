@@ -9,18 +9,27 @@ def apply_case_mutations(case: TestCase, fuzz_config) -> TestCase:
 
     mutations = _mutations_for_case(case, fuzz_config)
     locations = _locations_for_case(case, fuzz_config)
+    mutation_options = _mutation_options_for_case(case, fuzz_config)
+    case.applied_mutations = list(mutations)
+
+    if mutations and "mutation" not in case.strategy:
+        case.strategy = f"{case.strategy}+mutation"
 
     if locations.path:
-        case.path_params = _mutate_mapping(case.path_params, mutations)
+        case.path_params = _mutate_mapping(case.path_params, mutations, mutation_options)
 
     if locations.query:
-        case.query_params = _mutate_mapping(case.query_params, mutations)
+        case.query_params = _mutate_mapping(case.query_params, mutations, mutation_options)
 
     if locations.headers:
-        case.headers = _mutate_mapping(case.headers, mutations)
+        case.headers = _mutate_mapping(case.headers, mutations, mutation_options)
 
     if locations.body and case.body is not None:
-        case.body = mutation_engine.apply_mutations(case.body, mutations)
+        case.body = mutation_engine.apply_mutations(
+            case.body,
+            mutations,
+            mutation_options,
+        )
 
     return case
 
@@ -43,12 +52,32 @@ def _locations_for_case(case: TestCase, fuzz_config) -> MutationLocations:
     return fuzz_config.locations
 
 
-def _mutate_mapping(values: dict, mutations: list[str]) -> dict:
+def _mutation_options_for_case(case: TestCase, fuzz_config) -> dict:
+    options = {
+        mutation: dict(mutation_options)
+        for mutation, mutation_options in fuzz_config.mutation_options.items()
+    }
+    override = _override_for_case(case, fuzz_config)
+
+    if override and override.mutation_options:
+        for mutation, mutation_options in override.mutation_options.items():
+            merged = dict(options.get(mutation, {}))
+            merged.update(mutation_options)
+            options[mutation] = merged
+
+    return options
+
+
+def _mutate_mapping(values: dict, mutations: list[str], mutation_options: dict) -> dict:
     if not values:
         return values
 
     return {
-        key: mutation_engine.apply_mutations(value, mutations)
+        key: mutation_engine.apply_mutations(
+            value,
+            mutations,
+            mutation_options,
+        )
         for key, value in values.items()
     }
 

@@ -36,6 +36,7 @@ class EndpointOverride:
     endpoint: str
     mutations: list[str] = field(default_factory=list)
     locations: MutationLocations | None = None
+    mutation_options: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -49,6 +50,7 @@ class FuzzingConfig:
     exclude_paths: list[str] = field(default_factory=list)
     locations: MutationLocations = field(default_factory=MutationLocations)
     stateful: StatefulMutationPolicy = field(default_factory=StatefulMutationPolicy)
+    mutation_options: dict[str, dict[str, Any]] = field(default_factory=dict)
     overrides: list[EndpointOverride] = field(default_factory=list)
 
 
@@ -84,15 +86,19 @@ def parse_fuzz_config(raw: dict[str, Any]) -> FuzzingConfig:
         exclude_paths=_parse_string_list(raw.get("exclude_paths", defaults.exclude_paths), "exclude_paths"),
         locations=locations,
         stateful=stateful,
+        mutation_options=_parse_mutation_options(raw.get("mutation_options", {})),
         overrides=_parse_overrides(raw.get("overrides", []), locations),
     )
 
+    mutation_engine = MutationEngine()
     _validate_generators(config.generators)
-    MutationEngine().validate_mutations(config.mutations)
+    mutation_engine.validate_mutations(config.mutations)
+    mutation_engine.validate_mutation_options(config.mutation_options)
 
     for override in config.overrides:
         if override.mutations:
-            MutationEngine().validate_mutations(override.mutations)
+            mutation_engine.validate_mutations(override.mutations)
+        mutation_engine.validate_mutation_options(override.mutation_options)
 
     return config
 
@@ -177,10 +183,36 @@ def _parse_overrides(raw: Any, default_locations: MutationLocations) -> list[End
                 endpoint=_normalize_endpoint(endpoint),
                 mutations=_parse_string_list(item.get("mutations", []), f"overrides[{index}].mutations"),
                 locations=override_locations,
+                mutation_options=_parse_mutation_options(item.get("mutation_options", {})),
             )
         )
 
     return overrides
+
+
+def _parse_mutation_options(raw: Any) -> dict[str, dict[str, Any]]:
+    if raw is None:
+        return {}
+
+    if not isinstance(raw, dict):
+        raise ValueError("mutation_options must be a mapping")
+
+    options = {}
+
+    for mutation, value in raw.items():
+        if not isinstance(mutation, str) or not mutation.strip():
+            raise ValueError("mutation_options keys must be non-empty strings")
+
+        if value is None:
+            options[mutation.strip()] = {}
+            continue
+
+        if not isinstance(value, dict):
+            raise ValueError(f"mutation_options.{mutation} must be a mapping")
+
+        options[mutation.strip()] = value
+
+    return options
 
 
 def _normalize_endpoint(value: str) -> str:
