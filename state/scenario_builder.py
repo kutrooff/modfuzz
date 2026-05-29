@@ -24,6 +24,11 @@ class StatefulScenarioBuilder:
                 self._build_dependency_pair_sequences(test_cases, graph)
             )
 
+        sequences = [
+            self._prepend_auth_if_needed(sequence, test_cases)
+            for sequence in sequences
+        ]
+
         return self._dedupe_sequences(sequences)
 
     def _inject_state_reference(self, case: TestCase, link: OperationLink) -> None:
@@ -89,7 +94,7 @@ class StatefulScenarioBuilder:
         if not requires_auth:
             return sequence
 
-        if sequence[0].endpoint.path == "/login":
+        if self._is_auth_endpoint(sequence[0].endpoint):
             return sequence
 
         login_case = self._find_login_case(
@@ -97,6 +102,7 @@ class StatefulScenarioBuilder:
         )
 
         if login_case:
+            login_case.role = "setup"
             sequence.insert(
                 0,
                 login_case,
@@ -120,6 +126,8 @@ class StatefulScenarioBuilder:
 
             source_case = deepcopy(source_case)
             target_case = deepcopy(target_case)
+            source_case.role = "setup"
+            target_case.role = "target"
 
             self._inject_state_reference(target_case, link)
 
@@ -147,13 +155,25 @@ class StatefulScenarioBuilder:
         if create_case is None:
             return None
 
-        sequence = [deepcopy(create_case)]
+        create_copy = deepcopy(create_case)
+        create_copy.role = "setup"
 
-        for case in [read_case, update_case, read_case, delete_case, read_case]:
+        sequence = [create_copy]
+
+        lifecycle_steps = [
+            (read_case, "verification"),
+            (update_case, "target"),
+            (read_case, "verification"),
+            (delete_case, "cleanup"),
+            (read_case, "verification"),
+        ]
+
+        for case, role in lifecycle_steps:
             if case is None:
                 continue
 
             case_copy = deepcopy(case)
+            case_copy.role = role
 
             if not self._inject_producer_links(case_copy, sequence[0], graph):
                 continue

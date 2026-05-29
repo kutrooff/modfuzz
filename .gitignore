@@ -26,3 +26,5 @@ __pycache__/
 # спецификации API
 *.yaml
 *.yml
+!examples/*.yaml
+!examples/*.yml

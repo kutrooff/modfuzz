@@ -5,6 +5,19 @@ from string import ascii_letters
 
 class MutationEngine:
 
+
+    SUPPORTED_MUTATIONS = {
+        "sql_injection",
+        "xss",
+        "large_payload",
+        "random",
+        "type_confusion",
+        "negative_numbers",
+        "boundary_values",
+        "invalid_types",
+        "deep_json",
+    }
+
     SQL_PAYLOADS = [
         "' OR 1=1 --",
         "'; DROP TABLE users; --",
@@ -38,6 +51,8 @@ class MutationEngine:
 
     def apply_mutations(self, data, mutations: list[str]):
 
+        self.validate_mutations(mutations)
+
         mutated = deepcopy(data)
 
         for mutation in mutations:
@@ -56,11 +71,11 @@ class MutationEngine:
         if isinstance(value, str):
             return self._mutate_string(value, mutation)
 
-        if isinstance(value, int):
-            return self._mutate_integer(value, mutation)
-
         if isinstance(value, bool):
             return self._mutate_boolean(value, mutation)
+
+        if isinstance(value, int):
+            return self._mutate_integer(value, mutation)
 
         return value
 
@@ -143,3 +158,11 @@ class MutationEngine:
             return "true"
 
         return not value
+
+    def validate_mutations(self, mutations: list[str]) -> None:
+        unknown = set(mutations) - self.SUPPORTED_MUTATIONS
+
+        if unknown:
+            raise ValueError(
+                f"Unknown mutations: {', '.join(sorted(unknown))}"
+            )

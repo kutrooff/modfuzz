@@ -5,6 +5,7 @@ from core.runner import FuzzingRunner
 from schema.loader import load_schema
 from schema.parser import parse_openapi
 from state.config import load_state_config
+from generation.config import load_fuzz_config
 
 async def main():
 
@@ -37,7 +38,14 @@ async def main():
         help="Path to state dependency override config YAML/JSON",
     )
 
+    parser.add_argument(
+        "--fuzz-config",
+        default=None,
+        help="Path to fuzzing strategy config YAML/JSON",
+    )
+
     args = parser.parse_args()
+    fuzz_config = load_fuzz_config(args.fuzz_config)
     state_config = load_state_config(args.state_config)
     schema = load_schema(args.schema)
     endpoints = parse_openapi(schema)
@@ -45,6 +53,7 @@ async def main():
     runner = FuzzingRunner(
         base_url=args.base_url,
         state_config=state_config,
+        fuzz_config=fuzz_config,
     )
 
     if args.mode == "stateful":

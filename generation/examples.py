@@ -38,7 +38,7 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
 
         body = None
 
-        if endpoint.path == "/login":
+        if endpoint.path in {"/login", "/auth/login"}:
             body = LOGIN_EXAMPLES
 
         if endpoint.request_body:
