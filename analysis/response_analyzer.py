@@ -1,5 +1,6 @@
 from execution.result import ExecutionResult
 from analysis.models import AnalysisResult
+import re
 
 class ResponseAnalyzer:
 
@@ -10,12 +11,10 @@ class ResponseAnalyzer:
         "high": 3,
     }
 
-    HIDDEN_ERROR_PATTERNS = [
-        "error",
-        "exception",
-        "traceback",
-        "failed",
-    ]
+    HIDDEN_ERROR_REGEX = re.compile(
+        r"\b(error|exception|traceback|failed|failure)\b",
+        re.IGNORECASE,
+    )
 
     INVALID_BEHAVIOR_PATTERNS = [
         "warning",
@@ -59,18 +58,16 @@ class ResponseAnalyzer:
             analysis.issues.append("empty_response")
 
     def _check_hidden_errors(self, result, analysis):
+        if result.status_code != 200:
+            return
+
         if not isinstance(result.response_body, dict):
             return
 
-        text = str(result.response_body).lower()
+        text = str(result.response_body)
 
-
-        if (
-            result.status_code == 200
-            and any(word in text for word in self.HIDDEN_ERROR_PATTERNS)
-        ):
+        if self.HIDDEN_ERROR_REGEX.search(text):
             analysis.issues.append("hidden_error")
-
             self._set_severity(analysis, "medium")
 
     def _check_invalid_behavior(self, result, analysis):

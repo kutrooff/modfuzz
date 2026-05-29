@@ -6,25 +6,25 @@ from analysis.response_analyzer import ResponseAnalyzer
 from execution.http_client import AsyncHttpExecutor
 from generation.examples import generate_examples
 from generation.randomized import generate_random_cases, mutation_engine
+from generation.boundary import generate_boundary_cases
 from reporting.console import ConsoleReporter
 from reporting.json_reporter import JsonReporter
 from schema.models import Endpoint
 from state.scenario_builder import StatefulScenarioBuilder
 from execution.executor import Executor
 from state.stateful_executor import StatefulExecutor
+from state.config import StateConfig
 
 
 class FuzzingRunner:
 
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, state_config: StateConfig | None = None):
 
         self.base_url = base_url
-
         self.analyzer = ResponseAnalyzer()
-
         self.console = ConsoleReporter()
-
         self.json_reporter = JsonReporter()
+        self.state_config = state_config
 
     async def run_stateless(self,endpoints: List[Endpoint]):
 
@@ -33,7 +33,7 @@ class FuzzingRunner:
         mutations = [
             "sql_injection",
             "xss",
-            "boundary",
+            "boundary_values",
         ]
 
         async with AsyncHttpExecutor(
@@ -51,6 +51,8 @@ class FuzzingRunner:
                 cases = []
 
                 cases.extend(generate_examples(endpoints))
+
+                cases.extend(generate_random_cases(endpoints))
 
                 cases.extend(
                     generate_random_cases(
@@ -80,10 +82,10 @@ class FuzzingRunner:
         mutations = [
             "sql_injection",
             "xss",
-            "boundary",
+            "boundary_values",
         ]
 
-        builder = StatefulScenarioBuilder()
+        builder = StatefulScenarioBuilder(state_config=self.state_config)
 
         base_cases = generate_examples(
             endpoints
@@ -98,7 +100,8 @@ class FuzzingRunner:
         ) as http_executor:
 
             executor = StatefulExecutor(
-                http_executor
+                http_executor,
+                state_config=self.state_config,
             )
 
             for iteration in range(3):

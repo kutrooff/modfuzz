@@ -27,7 +27,7 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
 
             request_body = _parse_request_body(info, schema)
 
-            responses = _parse_responses(info)
+            responses = _parse_responses(info, schema)
 
             # Создание Endpoint
             endpoint = Endpoint(
@@ -81,14 +81,26 @@ def _parse_request_body(info: dict, schema: dict):
 
     return request_body
 
-def _parse_responses(info: dict):
+def _parse_responses(info: dict, schema: dict):
     responses = {}
+
     for status, resp in info.get("responses", {}).items():
+        raw_schema = (
+            resp.get("content", {})
+            .get("application/json", {})
+            .get("schema", {})
+        )
+
+        if "$ref" in raw_schema:
+            response_schema = resolve_ref(raw_schema["$ref"], schema)
+        else:
+            response_schema = raw_schema
+
         responses[status] = Response(
             status_code=status,
             description=resp.get("description", ""),
-            schema=resp.get("content", {}).get("application/json", {}).get("schema", {}),
-            content_type="application/json"
+            schema=response_schema,
+            content_type="application/json",
         )
 
     return responses

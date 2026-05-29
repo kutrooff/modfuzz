@@ -4,7 +4,15 @@ class ConsoleReporter:
     FINDING_LABELS = {"server_error": "Ошибка сервера",
                       "invalid_behavior": "Некорректное поведение",
                       "hidden_error": "Скрытая ошибка",
-                      "empty_response": "Пустой ответ", }
+                      "empty_response": "Пустой ответ",
+                      "state_read_after_create_failed": "Ресурс не читается после создания",
+                      "state_update_failed": "Обновление созданного ресурса не выполнено",
+                      "state_delete_failed": "Удаление созданного ресурса не выполнено",
+                      "state_delete_not_applied": "Ресурс доступен после удаления",
+                      "state_location_id_mismatch": "ID в Location не совпадает с body",
+                      "state_identity_mismatch": "Операция вернула другой ресурс",
+                      "state_update_not_visible": "Изменения не видны после обновления",
+                      }
 
     def __init__(self):
 
