@@ -252,10 +252,29 @@ class StateExtractor:
         parts = [
             part
             for part in path.split("/")
-            if part and not part.startswith("{")
+            if part
+            and not part.startswith("{")
+            and part != "*"
+            and not self._is_technical_segment(part)
         ]
 
         if not parts:
             return "resource"
 
-        return parts[0]
+        return parts[-1]
+
+    def _is_technical_segment(self, value: str) -> bool:
+        normalized = (
+            value
+            .replace("_", "")
+            .replace("-", "")
+            .lower()
+        )
+
+        if normalized in {"api", "rest", "gateway", "service", "services"}:
+            return True
+
+        if normalized.startswith("v") and normalized[1:].isdigit():
+            return True
+
+        return False

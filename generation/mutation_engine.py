@@ -1,6 +1,6 @@
 from copy import deepcopy
-from random import choice, randint, random
-from string import ascii_letters
+from random import choice, randint
+from string import ascii_letters, digits, punctuation
 
 
 class MutationEngine:
@@ -16,18 +16,30 @@ class MutationEngine:
         "boundary_values",
         "invalid_types",
         "deep_json",
+        "empty_values",
+        "null_values",
     }
 
     SQL_PAYLOADS = [
         "' OR 1=1 --",
         "'; DROP TABLE users; --",
         "\" OR \"1\"=\"1",
+        "' OR 'a'='a",
+        "admin' --",
+        "1; SELECT * FROM users",
+        "1 UNION SELECT NULL",
+        "') OR ('1'='1",
+        "0 OR 1=1",
     ]
 
     XSS_PAYLOADS = [
         "<script>alert(1)</script>",
         "<img src=x onerror=alert(1)>",
         "<svg/onload=alert(1)>",
+        "\"><script>alert(1)</script>",
+        "<body onload=alert(1)>",
+        "<iframe src=javascript:alert(1)>",
+        "<input autofocus onfocus=alert(1)>",
     ]
 
     BOUNDARY_NUMBERS = [
@@ -36,7 +48,10 @@ class MutationEngine:
         1,
         2**31 - 1,
         -(2**31),
+        2**63 - 1,
+        -(2**63),
         999999999,
+        10**10,
     ]
 
     INVALID_TYPES = [
@@ -47,7 +62,21 @@ class MutationEngine:
         False,
         "invalid",
         999999,
+        3.14159,
+        {"unexpected": "object"},
+        ["unexpected", "array"],
     ]
+
+    TYPE_CONFUSION_VALUES = [
+        {"confused": True},
+        ["confused"],
+        1,
+        0,
+        True,
+        False,
+    ]
+
+    RANDOM_ALPHABET = ascii_letters + digits + punctuation + " \t\n"
 
     def apply_mutations(self, data, mutations: list[str], options: dict | None = None):
 
@@ -96,14 +125,25 @@ class MutationEngine:
                 current = current["nested"]
 
         if mutation == "type_confusion":
-            mutated["unexpected_object"] = [
-                {"a": {"b": {"c": "boom"}}}
-            ]
+            mutated["unexpected_object"] = choice(
+                [
+                    [{"a": {"b": {"c": "boom"}}}],
+                    {"confused": True},
+                    "unexpected_string",
+                    999999,
+                ]
+            )
 
         return mutated
 
     def _mutate_array(self, arr: list, mutation, options):
         mutation_options = self._options_for(options, mutation)
+
+        if mutation == "empty_values":
+            return []
+
+        if mutation == "null_values":
+            return None
 
         mutated = [
             self._mutate(item, mutation, options)
@@ -112,6 +152,16 @@ class MutationEngine:
 
         if mutation == "large_payload":
             mutated *= self._int_option(mutation_options, "array_repeat", 100, minimum=1)
+
+        if mutation == "type_confusion":
+            return choice(
+                [
+                    {"array_replaced_by": "object"},
+                    "array_replaced_by_string",
+                    999999,
+                    True,
+                ]
+            )
 
         return mutated
 
@@ -131,14 +181,21 @@ class MutationEngine:
             min_length = self._int_option(mutation_options, "min_length", 100, minimum=0)
             max_length = self._int_option(mutation_options, "max_length", 500, minimum=min_length)
             return "".join(
-                choice(ascii_letters)
+                choice(self.RANDOM_ALPHABET)
                 for _ in range(randint(min_length, max_length))
             )
 
         if mutation == "type_confusion":
-            return {
-                "confused": True
-            }
+            return choice(self.TYPE_CONFUSION_VALUES)
+
+        if mutation == "invalid_types":
+            return choice(self._list_option(mutation_options, "values", [12345, True, [], {}, None]))
+
+        if mutation == "empty_values":
+            return ""
+
+        if mutation == "null_values":
+            return None
 
         return value
 
@@ -157,6 +214,15 @@ class MutationEngine:
         if mutation == "large_payload":
             return self._int_option(mutation_options, "integer_value", 10**10)
 
+        if mutation == "type_confusion":
+            return choice(self._list_option(mutation_options, "values", ["not_a_number", [], {}, True, None]))
+
+        if mutation == "empty_values":
+            return ""
+
+        if mutation == "null_values":
+            return None
+
         return value
 
     def _mutate_boolean(self, value: bool, mutation, options):
@@ -164,6 +230,15 @@ class MutationEngine:
 
         if mutation == "invalid_types":
             return choice(self._list_option(mutation_options, "values", ["true"]))
+
+        if mutation == "type_confusion":
+            return choice(self._list_option(mutation_options, "values", ["not_a_boolean", 1, 0, [], {}, None]))
+
+        if mutation == "empty_values":
+            return ""
+
+        if mutation == "null_values":
+            return None
 
         return not value
 

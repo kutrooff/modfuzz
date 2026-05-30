@@ -74,6 +74,7 @@ class Endpoint:
     tags: List[str] = field(default_factory=list)
     summary: str = ""
     description: str = ""
+    operation_id: str = ""
     requires_auth: bool = False
 
 @dataclass

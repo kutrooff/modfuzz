@@ -8,7 +8,6 @@ from state.extractor import StateExtractor
 from state.manager import StateManager
 from state.resolver import StateResolver
 from analysis.response_analyzer import ResponseAnalyzer
-from strategy.manager import AdaptiveStrategyManager
 from state.models import OperationLink
 from state.assertions import StateAssertionAnalyzer
 from state.config import StateConfig
@@ -40,7 +39,6 @@ class StatefulExecutor:
         self.extractor = extractor or StateExtractor()
         self.resolver = resolver or StateResolver(self.state_manager)
         self.analyzer = ResponseAnalyzer()
-        self.strategy_manager = AdaptiveStrategyManager()
         self.state_assertions = StateAssertionAnalyzer()
         self.dependency_analyzer = DependencyAnalyzer(state_config)
 

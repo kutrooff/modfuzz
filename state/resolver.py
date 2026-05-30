@@ -103,8 +103,30 @@ class StateResolver:
                     break
 
     def _resource_name_from_path(self, path: str) -> str:
-        parts = [part for part in path.split("/") if part and not part.startswith("{")]
-        return parts[0] if parts else "resource"
+        parts = [
+            part for part in path.split("/")
+            if part
+            and not part.startswith("{")
+            and part != "*"
+            and not self._is_technical_segment(part)
+        ]
+        return parts[-1] if parts else "resource"
+
+    def _is_technical_segment(self, value: str) -> bool:
+        normalized = (
+            value
+            .replace("_", "")
+            .replace("-", "")
+            .lower()
+        )
+
+        if normalized in {"api", "rest", "gateway", "service", "services"}:
+            return True
+
+        if normalized.startswith("v") and normalized[1:].isdigit():
+            return True
+
+        return False
 
     def _singular(self, value: str) -> str:
         if value.endswith("ies"):

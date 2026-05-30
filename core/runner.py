@@ -9,6 +9,7 @@ from generation.boundary import generate_boundary_cases
 from generation.examples import generate_examples
 from generation.randomized import generate_random_cases
 from reporting.console import ConsoleReporter
+from reporting.html_reporter import HtmlReporter
 from reporting.json_reporter import JsonReporter
 from schema.models import Endpoint
 from state.scenario_builder import StatefulScenarioBuilder
@@ -30,6 +31,7 @@ class FuzzingRunner:
         self.analyzer = ResponseAnalyzer()
         self.console = ConsoleReporter()
         self.json_reporter = JsonReporter()
+        self.html_reporter = HtmlReporter()
         self.state_config = state_config
 
     async def run_stateless(self,endpoints: List[Endpoint]):
@@ -64,6 +66,12 @@ class FuzzingRunner:
                     )
 
                 results = await executor.run_cases(cases)
+
+                self._mark_results_context(
+                    results=results,
+                    iteration=iteration + 1,
+                    scenario_id=f"stateless-iteration-{iteration + 1}",
+                )
 
                 self._process_results(results)
 
@@ -130,7 +138,7 @@ class FuzzingRunner:
                     mutations=mutations,
                 )
 
-                for sequence in sequences:
+                for sequence_index, sequence in enumerate(sequences, start=1):
 
                     mutated_sequence = []
 
@@ -151,6 +159,12 @@ class FuzzingRunner:
                         await executor.run_sequence(
                             mutated_sequence
                         )
+                    )
+
+                    self._mark_results_context(
+                        results=sequence_results,
+                        iteration=iteration + 1,
+                        scenario_id=f"stateful-scenario-{sequence_index}",
                     )
 
                     self._process_results(
@@ -232,8 +246,21 @@ class FuzzingRunner:
         )
 
         self.console.print_report_saved(
-            report_path
+            report_path,
+            report_type="JSON"
         )
+
+        if mode == "stateful":
+            html_report_path = self.html_reporter.export(
+                results=results,
+                findings_counter=findings_counter,
+                mode=mode
+            )
+
+            self.console.print_report_saved(
+                html_report_path,
+                report_type="HTML"
+            )
 
     def _should_mutate_case(self, case):
         role = getattr(case, "role", "target")
@@ -267,3 +294,9 @@ class FuzzingRunner:
             cases.extend(generate_boundary_cases(endpoints))
 
         return cases
+
+    def _mark_results_context(self, results, iteration: int, scenario_id: str):
+        for step, result in enumerate(results, start=1):
+            result.iteration = iteration
+            result.scenario_id = scenario_id
+            result.scenario_step = step

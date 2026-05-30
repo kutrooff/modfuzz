@@ -1,5 +1,6 @@
 from typing import List
 from dataclasses import dataclass
+import re
 
 from schema.models import Endpoint
 from state.models import DependencyGraph, OperationLink
@@ -28,7 +29,14 @@ class DependencyAnalyzer:
 
     MIN_CONFIDENCE = 0.55
     PRODUCER_METHODS = {"POST"}
-    CONSUMER_METHODS = {"GET", "PUT", "PATCH", "DELETE"}
+    CONSUMER_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
+    TECHNICAL_SEGMENTS = {
+        "api",
+        "rest",
+        "gateway",
+        "service",
+        "services",
+    }
 
     def analyze(self, endpoints: List[Endpoint]) -> DependencyGraph:
         graph = DependencyGraph()
@@ -49,7 +57,7 @@ class DependencyAnalyzer:
             for consumer in consumers:
                 path_params = [
                     param for param in consumer.parameters
-                    if param.in_ == "path"
+                    if param.in_ in {"path", "query"}
                 ]
 
                 for param in path_params:
@@ -63,8 +71,41 @@ class DependencyAnalyzer:
                     if link:
                         graph.links.append(link)
 
+        graph.links = self._select_best_links(graph.links)
         self._apply_config_overrides(graph, endpoints)
         return graph
+
+    def _select_best_links(self, links: List[OperationLink]) -> List[OperationLink]:
+        best: dict[tuple[str, str, str, str, str], OperationLink] = {}
+
+        for link in links:
+            key = (
+                link.target.method,
+                link.target.path,
+                link.target_location,
+                link.target_param,
+                link.source_json_path,
+            )
+            current = best.get(key)
+
+            if current is None or link.confidence > current.confidence:
+                best[key] = link
+
+        by_target_param: dict[tuple[str, str, str, str], OperationLink] = {}
+
+        for link in best.values():
+            key = (
+                link.target.method,
+                link.target.path,
+                link.target_location,
+                link.target_param,
+            )
+            current = by_target_param.get(key)
+
+            if current is None or link.confidence > current.confidence:
+                by_target_param[key] = link
+
+        return list(by_target_param.values())
 
     def _is_producer(self, endpoint: Endpoint) -> bool:
         if endpoint.method.upper() not in self.PRODUCER_METHODS:
@@ -76,12 +117,40 @@ class DependencyAnalyzer:
         if endpoint.method.upper() not in self.CONSUMER_METHODS:
 
             return False
-        return any(param.in_ == "path" for param in endpoint.parameters)
+        return any(param.in_ in {"path", "query"} for param in endpoint.parameters)
 
     def _resource_name(self, path: str) -> str:
-        parts = [part for part in path.split("/") if part and not part.startswith("{")]
+        parts = self._resource_segments(path)
 
-        return parts[0] if parts else "resource"
+        return parts[-1] if parts else "resource"
+
+    def _resource_segments(self, path: str) -> list[str]:
+        result = []
+
+        for part in path.split("/"):
+            if not part or part.startswith("{") or part == "*":
+                continue
+
+            normalized = self._normalize_name(part)
+
+            if self._is_technical_segment(normalized):
+                continue
+
+            result.append(part)
+
+        return result
+
+    def _is_technical_segment(self, normalized: str) -> bool:
+        if normalized in self.TECHNICAL_SEGMENTS:
+            return True
+
+        if re.fullmatch(r"v\d+", normalized):
+            return True
+
+        if re.fullmatch(r"api\d*", normalized):
+            return True
+
+        return False
 
     def _has_success_response(self,endpoint: Endpoint,) -> bool:
 
@@ -118,9 +187,27 @@ class DependencyAnalyzer:
         if not schema:
             return fields
 
+        if "allOf" in schema:
+            for item in schema.get("allOf", []):
+                fields.extend(
+                    self._flatten_schema_fields(
+                        item,
+                        prefix,
+                    )
+                )
+
+        if "oneOf" in schema or "anyOf" in schema:
+            for item in schema.get("oneOf", []) + schema.get("anyOf", []):
+                fields.extend(
+                    self._flatten_schema_fields(
+                        item,
+                        prefix,
+                    )
+                )
+
         schema_type = schema.get("type")
 
-        if schema_type == "object":
+        if schema_type == "object" or "properties" in schema:
             properties = schema.get("properties", {})
 
             for field_name, field_schema in properties.items():
@@ -156,6 +243,7 @@ class DependencyAnalyzer:
             value
             .replace("_", "")
             .replace("-", "")
+            .replace(".", "")
             .lower()
         )
 
@@ -165,29 +253,72 @@ class DependencyAnalyzer:
 
         producer_resource = self._resource_name(producer.path)
         consumer_resource = self._resource_name(consumer.path)
+        target_resource = self._resource_from_param(
+            consumer.path,
+            target_param.name,
+        )
+
+        producer_matches_target = (
+            target_resource
+            and self._resource_matches(producer_resource, target_resource)
+        )
 
         if producer_resource == consumer_resource:
-            score += 0.40
+            score += 0.20
             reasons.append("same_resource")
-        else:
-            score -= 0.20
+
+        if producer_matches_target:
+            score += 0.35
+            reasons.append("producer_matches_target_param_resource")
+
+        elif producer_resource != consumer_resource:
+            score -= 0.15
             reasons.append("different_resource")
 
         target_name = target_param.name
         target_norm = self._normalize_name(target_name)
         field_norm = self._normalize_name(field.name)
+        field_context = self._normalize_name(field.json_path)
 
         if target_name == field.name:
-            score += 0.30
+            score += 0.45
             reasons.append("exact_name_match")
 
         elif target_norm == field_norm:
-            score += 0.25
+            score += 0.40
             reasons.append("normalized_name_match")
 
-        if target_norm.endswith("id") and field_norm == "id":
-            score += 0.20
-            reasons.append("id_suffix_match")
+        if target_norm.endswith("id") and field_norm == "id" and producer_matches_target:
+            score += 0.35
+            reasons.append("producer_id_matches_target_id")
+
+        elif target_norm.endswith("id") and field_norm == "id":
+            score -= 0.30
+            reasons.append("producer_id_does_not_match_target_resource")
+
+        if (
+                target_param.in_ == "path"
+                and target_norm == field_norm
+                and not producer_matches_target
+        ):
+            score -= 0.25
+            reasons.append("foreign_key_not_preferred_for_path_param")
+
+        if target_resource and field_norm == "id" and producer_matches_target:
+            score += 0.10
+            reasons.append("resource_id_match")
+
+        if target_resource and self._normalize_name(target_resource) in field_context:
+            score += 0.10
+            reasons.append("resource_name_in_response_path")
+
+        if self._endpoint_metadata_matches(producer, target_resource):
+            score += 0.10
+            reasons.append("producer_metadata_match")
+
+        if self._endpoint_metadata_matches(consumer, target_resource):
+            score += 0.05
+            reasons.append("consumer_metadata_match")
 
         if field_norm == "uuid":
             score += 0.15
@@ -199,11 +330,74 @@ class DependencyAnalyzer:
 
         return score, ", ".join(reasons)
 
+    def _resource_from_param(self, path: str, param_name: str) -> str | None:
+        param_norm = self._normalize_name(param_name)
+
+        for suffix in ("id", "uuid", "key"):
+            if param_norm.endswith(suffix) and len(param_norm) > len(suffix):
+                return param_norm[:-len(suffix)]
+
+        segments = [
+            part for part in path.split("/")
+            if part and not part.startswith("{") and part != "*"
+        ]
+        marker = "{" + param_name + "}"
+
+        for index, part in enumerate(path.split("/")):
+            if part == marker:
+                previous = [
+                    segment for segment in path.split("/")[:index]
+                    if segment and not segment.startswith("{") and segment != "*"
+                ]
+                return previous[-1] if previous else None
+
+        return segments[-1] if segments else None
+
+    def _resource_matches(self, left: str, right: str) -> bool:
+        left_norm = self._singular(self._normalize_name(left))
+        right_norm = self._singular(self._normalize_name(right))
+        return left_norm == right_norm
+
+    def _path_contains_resource(self, path: str, resource: str) -> bool:
+        return any(
+            self._resource_matches(segment, resource)
+            for segment in self._resource_segments(path)
+        )
+
+    def _endpoint_metadata_matches(self, endpoint: Endpoint, resource: str | None) -> bool:
+        if not resource:
+            return False
+
+        resource_norm = self._singular(self._normalize_name(resource))
+        values = [endpoint.operation_id, endpoint.summary, endpoint.description]
+        values.extend(endpoint.tags or [])
+
+        return any(
+            resource_norm in self._singular(self._normalize_name(value))
+            for value in values
+            if value
+        )
+
+    def _singular(self, value: str) -> str:
+        if value.endswith("ies") and len(value) > 3:
+            return value[:-3] + "y"
+
+        if value.endswith("es") and len(value) > 2:
+            return value[:-2]
+
+        if value.endswith("s") and len(value) > 1:
+            return value[:-1]
+
+        return value
+
     def _build_best_link(self, producer, consumer, target_param, produced_fields):
         best_link = None
         best_score = 0.0
 
-        resource_name = self._resource_name(producer.path)
+        resource_name = self._resource_from_param(
+            consumer.path,
+            target_param.name,
+        ) or self._resource_name(producer.path)
 
         for field in produced_fields:
             score, reason = self._score_candidate(

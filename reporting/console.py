@@ -172,11 +172,11 @@ class ConsoleReporter:
             "white"
         )
 
-    def print_report_saved(self, report_path):
+    def print_report_saved(self, report_path, report_type="JSON"):
 
         self.console.print()
 
         self.console.print(
-            f"[bold green]JSON отчёт сохранён в :[/bold green] "
+            f"[bold green]{report_type} report saved to:[/bold green] "
             f"{report_path}"
         )

@@ -61,8 +61,30 @@ class StatefulScenarioBuilder:
         return None
 
     def _resource_name(self, path: str) -> str:
-        parts = [part for part in path.split("/") if part and not part.startswith("{")]
-        return parts[0] if parts else "resource"
+        parts = [
+            part for part in path.split("/")
+            if part
+            and not part.startswith("{")
+            and part != "*"
+            and not self._is_technical_segment(part)
+        ]
+        return parts[-1] if parts else "resource"
+
+    def _is_technical_segment(self, value: str) -> bool:
+        normalized = (
+            value
+            .replace("_", "")
+            .replace("-", "")
+            .lower()
+        )
+
+        if normalized in {"api", "rest", "gateway", "service", "services"}:
+            return True
+
+        if normalized.startswith("v") and normalized[1:].isdigit():
+            return True
+
+        return False
 
     def _find_login_case(self, test_cases: List[TestCase]) -> TestCase | None:
 
@@ -259,7 +281,10 @@ class StatefulScenarioBuilder:
             case_copy = deepcopy(case)
             case_copy.role = role
 
-            if not self._inject_producer_links(case_copy, sequence[0], graph):
+            if (
+                    not self._inject_producer_links(case_copy, sequence[0], graph)
+                    and not self._uses_same_path_template(case_copy, create_copy)
+            ):
                 continue
 
             sequence.append(case_copy)
@@ -276,7 +301,12 @@ class StatefulScenarioBuilder:
         return grouped
 
     def _find_create_case(self, cases: List[TestCase]) -> TestCase | None:
-        return self._find_by_method(cases, {"POST"}, requires_path_param=False)
+        create_case = self._find_by_method(cases, {"POST"}, requires_path_param=False)
+
+        if create_case:
+            return create_case
+
+        return self._find_by_method(cases, {"POST"}, requires_path_param=True)
 
     def _find_read_case(self, cases: List[TestCase]) -> TestCase | None:
         return self._find_by_method(cases, {"GET"}, requires_path_param=True)
@@ -318,6 +348,13 @@ class StatefulScenarioBuilder:
                 injected = True
 
         return injected
+
+    def _uses_same_path_template(self, case: TestCase, source_case: TestCase) -> bool:
+        return (
+            case.endpoint.path == source_case.endpoint.path
+            and case.endpoint.method.upper() == "GET"
+            and source_case.endpoint.method.upper() == "POST"
+        )
 
     def _dedupe_sequences(self, sequences: List[List[TestCase]]) -> List[List[TestCase]]:
         seen = set()

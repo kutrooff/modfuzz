@@ -16,3 +16,6 @@ class ExecutionResult:
     request_url: Optional[str] = None
     request_method: Optional[str] = None
     analysis: Dict[str, Any] = field(default_factory=dict)
+    iteration: Optional[int] = None
+    scenario_id: Optional[str] = None
+    scenario_step: Optional[int] = None
