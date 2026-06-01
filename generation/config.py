@@ -14,6 +14,14 @@ SUPPORTED_GENERATORS = {
     "boundary",
 }
 
+SUPPORTED_MUTATION_POLICY_MODES = {
+    "all",
+    "one_per_case",
+    "round_robin",
+    "per_iteration",
+    "random_one",
+}
+
 
 @dataclass
 class MutationLocations:
@@ -29,6 +37,12 @@ class StatefulMutationPolicy:
     mutate_target_requests: bool = True
     mutate_verification_requests: bool = False
     mutate_cleanup_requests: bool = False
+
+
+@dataclass
+class MutationPolicy:
+    mode: str = "all"
+    max_per_case: int = 1
 
 
 @dataclass
@@ -50,6 +64,7 @@ class FuzzingConfig:
     exclude_paths: list[str] = field(default_factory=list)
     locations: MutationLocations = field(default_factory=MutationLocations)
     stateful: StatefulMutationPolicy = field(default_factory=StatefulMutationPolicy)
+    mutation_policy: MutationPolicy = field(default_factory=MutationPolicy)
     mutation_options: dict[str, dict[str, Any]] = field(default_factory=dict)
     overrides: list[EndpointOverride] = field(default_factory=list)
 
@@ -72,6 +87,7 @@ def parse_fuzz_config(raw: dict[str, Any]) -> FuzzingConfig:
     defaults = FuzzingConfig()
     locations = _parse_locations(raw.get("locations"), defaults.locations)
     stateful = _parse_stateful_policy(raw.get("stateful"), defaults.stateful)
+    mutation_policy = _parse_mutation_policy(raw.get("mutation_policy"), defaults.mutation_policy)
 
     config = FuzzingConfig(
         iterations=_positive_int(raw.get("iterations", defaults.iterations), "iterations"),
@@ -86,6 +102,7 @@ def parse_fuzz_config(raw: dict[str, Any]) -> FuzzingConfig:
         exclude_paths=_parse_string_list(raw.get("exclude_paths", defaults.exclude_paths), "exclude_paths"),
         locations=locations,
         stateful=stateful,
+        mutation_policy=mutation_policy,
         mutation_options=_parse_mutation_options(raw.get("mutation_options", {})),
         overrides=_parse_overrides(raw.get("overrides", []), locations),
     )
@@ -151,6 +168,37 @@ def _parse_stateful_policy(raw: Any, defaults: StatefulMutationPolicy) -> Statef
         mutate_cleanup_requests=_bool_value(
             raw.get("mutate_cleanup_requests", defaults.mutate_cleanup_requests),
             "stateful.mutate_cleanup_requests",
+        ),
+    )
+
+
+def _parse_mutation_policy(raw: Any, defaults: MutationPolicy) -> MutationPolicy:
+    if raw is None:
+        return MutationPolicy(
+            mode=defaults.mode,
+            max_per_case=defaults.max_per_case,
+        )
+
+    if not isinstance(raw, dict):
+        raise ValueError("mutation_policy must be a mapping")
+
+    mode = raw.get("mode", defaults.mode)
+
+    if not isinstance(mode, str) or not mode.strip():
+        raise ValueError("mutation_policy.mode must be a non-empty string")
+
+    mode = mode.strip()
+
+    if mode not in SUPPORTED_MUTATION_POLICY_MODES:
+        raise ValueError(
+            f"Unknown mutation policy mode: {mode}"
+        )
+
+    return MutationPolicy(
+        mode=mode,
+        max_per_case=_positive_int(
+            raw.get("max_per_case", defaults.max_per_case),
+            "mutation_policy.max_per_case",
         ),
     )
 

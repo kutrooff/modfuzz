@@ -1,4 +1,5 @@
 from typing import List
+from analysis.models import AnalysisResult
 from state.dependencies import DependencyAnalyzer
 from execution.checks import run_default_checks
 from execution.http_client import AsyncHttpExecutor
@@ -11,6 +12,8 @@ from analysis.response_analyzer import ResponseAnalyzer
 from state.models import OperationLink
 from state.assertions import StateAssertionAnalyzer
 from state.config import StateConfig
+from state.cross_service_assertions import CrossServiceAssertionRunner
+from state.resolver import StateResolutionError
 
 
 class StatefulExecutor:
@@ -41,6 +44,11 @@ class StatefulExecutor:
         self.analyzer = ResponseAnalyzer()
         self.state_assertions = StateAssertionAnalyzer()
         self.dependency_analyzer = DependencyAnalyzer(state_config)
+        self.cross_service_assertions = CrossServiceAssertionRunner(
+            http_executor=http_executor,
+            state_manager=self.state_manager,
+            state_config=state_config,
+        )
 
     async def run_case(
             self,
@@ -86,14 +94,24 @@ class StatefulExecutor:
             incoming_links = graph.producers_for(case.endpoint)
             outgoing_links = graph.consumers_for(case.endpoint)
 
-            result = await self.run_case(
-                case,
-                incoming_links=incoming_links,
-                outgoing_links=outgoing_links,
-                request_index=request_index,
-            )
+            try:
+                result = await self.run_case(
+                    case,
+                    incoming_links=incoming_links,
+                    outgoing_links=outgoing_links,
+                    request_index=request_index,
+                )
+            except StateResolutionError as exc:
+                result = self._state_resolution_result(case, exc)
+                results.append(result)
+                break
 
             results.append(result)
+
+            cross_service_results = await self.cross_service_assertions.run_after(
+                result
+            )
+            results.extend(cross_service_results)
 
             if result.status_code is None:
                 break
@@ -104,3 +122,25 @@ class StatefulExecutor:
         self.state_assertions.analyze_sequence(results)
 
         return results
+
+    def _state_resolution_result(
+            self,
+            case: TestCase,
+            exc: StateResolutionError,
+    ) -> ExecutionResult:
+        analysis = AnalysisResult(
+            issues=["state_resolution_failed"],
+            severity="high",
+        )
+
+        return ExecutionResult(
+            case=case,
+            status_code=None,
+            response_body=None,
+            response_headers={},
+            elapsed_ms=0,
+            success=False,
+            error=str(exc),
+            request_method=case.method,
+            analysis=analysis,
+        )

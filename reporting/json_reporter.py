@@ -20,7 +20,7 @@ class JsonReporter:
             exist_ok=True
         )
 
-        timestamp = datetime.now().strftime("%H-%M-%S_%d_%m_%Y")
+        timestamp = datetime.now().strftime("%H-%M-%S_%d.%m.%Y")
 
         report_name = (f"{mode}-report-{timestamp}.json")
 

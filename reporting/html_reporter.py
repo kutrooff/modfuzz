@@ -21,6 +21,10 @@ class HtmlReporter:
         "state_location_id_mismatch": "ID в Location не совпадает с ID в теле ответа.",
         "state_identity_mismatch": "API вернул не тот ресурс, который ожидался.",
         "state_update_not_visible": "Изменения ресурса не видны после обновления.",
+        "state_resolution_failed": "Не удалось подставить значение из состояния в зависимый запрос.",
+        "cross_service_state_mismatch": "Связанное состояние в другом сервисе не соответствует ожидаемому.",
+        "invalid_state_transition": "API допустил или неверно обработал недопустимый переход состояния.",
+        "referential_integrity_violation": "API некорректно обработал ссылку на несуществующий связанный ресурс.",
     }
 
     def export(
@@ -39,7 +43,7 @@ class HtmlReporter:
             exist_ok=True,
         )
 
-        timestamp = datetime.now().strftime("%H-%M-%S_%d_%m_%Y")
+        timestamp = datetime.now().strftime("%H-%M-%S_%d.%m.%Y")
         report_path = output_path / f"{mode}-report-{timestamp}.html"
 
         with open(report_path, "w", encoding="utf-8") as file:

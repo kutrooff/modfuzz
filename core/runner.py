@@ -61,8 +61,13 @@ class FuzzingRunner:
 
                 if mutations:
                     cases.extend(
-                        apply_case_mutations(case, self.fuzz_config)
-                        for case in base_cases
+                        apply_case_mutations(
+                            case,
+                            self.fuzz_config,
+                            iteration=iteration + 1,
+                            mutation_index=case_index,
+                        )
+                        for case_index, case in enumerate(base_cases)
                     )
 
                 results = await executor.run_cases(cases)
@@ -138,6 +143,8 @@ class FuzzingRunner:
                     mutations=mutations,
                 )
 
+                mutation_index = 0
+
                 for sequence_index, sequence in enumerate(sequences, start=1):
 
                     mutated_sequence = []
@@ -147,7 +154,13 @@ class FuzzingRunner:
                         mutated_case = deepcopy(case)
 
                         if self._should_mutate_case(case):
-                            mutated_case = apply_case_mutations(case, self.fuzz_config)
+                            mutated_case = apply_case_mutations(
+                                case,
+                                self.fuzz_config,
+                                iteration=iteration + 1,
+                                mutation_index=mutation_index,
+                            )
+                            mutation_index += 1
                         else:
                             mutated_case = deepcopy(case)
 

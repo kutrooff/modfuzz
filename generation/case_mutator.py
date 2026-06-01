@@ -1,13 +1,25 @@
 from copy import deepcopy
+import random
 from schema.models import TestCase
 from generation.config import MutationLocations
 from generation.randomized import mutation_engine
 
 
-def apply_case_mutations(case: TestCase, fuzz_config) -> TestCase:
+def apply_case_mutations(
+    case: TestCase,
+    fuzz_config,
+    iteration: int | None = None,
+    mutation_index: int | None = None,
+) -> TestCase:
     case = deepcopy(case)
 
-    mutations = _mutations_for_case(case, fuzz_config)
+    available_mutations = _mutations_for_case(case, fuzz_config)
+    mutations = _select_mutations(
+        available_mutations,
+        fuzz_config.mutation_policy,
+        iteration=iteration,
+        mutation_index=mutation_index,
+    )
     locations = _locations_for_case(case, fuzz_config)
     mutation_options = _mutation_options_for_case(case, fuzz_config)
     case.applied_mutations = list(mutations)
@@ -32,6 +44,49 @@ def apply_case_mutations(case: TestCase, fuzz_config) -> TestCase:
         )
 
     return case
+
+
+def _select_mutations(
+    mutations: list[str],
+    policy,
+    iteration: int | None = None,
+    mutation_index: int | None = None,
+) -> list[str]:
+    if not mutations:
+        return []
+
+    mode = getattr(policy, "mode", "all")
+
+    if mode == "all":
+        return list(mutations)
+
+    max_per_case = min(
+        max(getattr(policy, "max_per_case", 1), 1),
+        len(mutations),
+    )
+
+    if mode == "one_per_case":
+        return list(mutations[:max_per_case])
+
+    if mode == "round_robin":
+        start = (mutation_index or 0) % len(mutations)
+        return _mutation_window(mutations, start, max_per_case)
+
+    if mode == "per_iteration":
+        start = ((iteration or 1) - 1) % len(mutations)
+        return _mutation_window(mutations, start, max_per_case)
+
+    if mode == "random_one":
+        return random.sample(list(mutations), k=max_per_case)
+
+    return list(mutations)
+
+
+def _mutation_window(mutations: list[str], start: int, size: int) -> list[str]:
+    return [
+        mutations[(start + offset) % len(mutations)]
+        for offset in range(size)
+    ]
 
 
 def _mutations_for_case(case: TestCase, fuzz_config) -> list[str]:

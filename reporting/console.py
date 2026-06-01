@@ -12,6 +12,10 @@ class ConsoleReporter:
                       "state_location_id_mismatch": "ID в Location не совпадает с body",
                       "state_identity_mismatch": "Операция вернула другой ресурс",
                       "state_update_not_visible": "Изменения не видны после обновления",
+                      "state_resolution_failed": "Не удалось подставить данные состояния",
+                      "cross_service_state_mismatch": "Нарушена межсервисная согласованность",
+                      "invalid_state_transition": "Недопустимый переход состояния",
+                      "referential_integrity_violation": "Нарушена ссылочная целостность",
                       }
 
     def __init__(self):
@@ -177,6 +181,6 @@ class ConsoleReporter:
         self.console.print()
 
         self.console.print(
-            f"[bold green]{report_type} report saved to:[/bold green] "
+            f"[bold green]{report_type} отчёт сохранён в файл:[/bold green] "
             f"{report_path}"
         )
