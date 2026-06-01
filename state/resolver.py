@@ -5,13 +5,16 @@ from schema.models import TestCase
 from state.manager import StateManager
 from state.models import OperationLink
 
+
 class StateResolver:
     """Подставляет значения из StateManager в TestCase"""
 
     def __init__(self, state_manager: StateManager):
         self.state = state_manager
 
-    def resolve(self, case: TestCase, links: list[OperationLink] | None = None) -> TestCase:
+    def resolve(
+        self, case: TestCase, links: list[OperationLink] | None = None
+    ) -> TestCase:
         case = deepcopy(case)
         self._apply_links(case, links or [])
 
@@ -36,7 +39,7 @@ class StateResolver:
         if not case.endpoint.requires_auth:
             return
 
-        token = (self.state.get("auth.token") or self.state.get("auth.access_token"))
+        token = self.state.get("auth.token") or self.state.get("auth.access_token")
 
         if not token:
             return
@@ -44,9 +47,7 @@ class StateResolver:
         if case.headers is None:
             case.headers = {}
 
-        case.headers["Authorization"] = (
-            f"Bearer {token}"
-        )
+        case.headers["Authorization"] = f"Bearer {token}"
 
     def _resolve_mapping(self, data: dict | None) -> dict:
 
@@ -66,9 +67,7 @@ class StateResolver:
 
             for state_key, state_value in self.state.as_dict().items():
 
-                placeholder = (
-                    f"$state.{state_key}"
-                )
+                placeholder = f"$state.{state_key}"
 
                 if placeholder in value:
                     value = value.replace(placeholder, str(state_value))
@@ -104,7 +103,8 @@ class StateResolver:
 
     def _resource_name_from_path(self, path: str) -> str:
         parts = [
-            part for part in path.split("/")
+            part
+            for part in path.split("/")
             if part
             and not part.startswith("{")
             and part != "*"
@@ -113,12 +113,7 @@ class StateResolver:
         return parts[-1] if parts else "resource"
 
     def _is_technical_segment(self, value: str) -> bool:
-        normalized = (
-            value
-            .replace("_", "")
-            .replace("-", "")
-            .lower()
-        )
+        normalized = value.replace("_", "").replace("-", "").lower()
 
         if normalized in {"api", "rest", "gateway", "service", "services"}:
             return True
@@ -136,18 +131,16 @@ class StateResolver:
         return value
 
     def _apply_links(
-            self,
-            case: TestCase,
-            links: list[OperationLink],
+        self,
+        case: TestCase,
+        links: list[OperationLink],
     ) -> None:
         for link in links:
             value = self._resolve_link_value(link)
 
             if value is None:
                 if link.required:
-                    raise StateResolutionError(
-                        [f"$state.{link.state_key}"]
-                    )
+                    raise StateResolutionError([f"$state.{link.state_key}"])
                 continue
 
             self._inject_value(case, link.target_location, link.target_param, value)
@@ -163,11 +156,11 @@ class StateResolver:
         return None
 
     def _inject_value(
-            self,
-            case: TestCase,
-            location: str,
-            name: str,
-            value,
+        self,
+        case: TestCase,
+        location: str,
+        name: str,
+        value,
     ) -> None:
         if location == "path":
             case.path_params[name] = value
@@ -211,12 +204,7 @@ class StateResolver:
         return refs
 
 
-
 class StateResolutionError(Exception):
     def __init__(self, unresolved_refs: list[str]):
         self.unresolved_refs = unresolved_refs
-        super().__init__(
-            f"Unresolved state references: {', '.join(unresolved_refs)}"
-        )
-
-
+        super().__init__(f"Unresolved state references: {', '.join(unresolved_refs)}")

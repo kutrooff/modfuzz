@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -26,6 +26,7 @@ class SnapshotStore:
             if snapshot.source_method == method:
                 return snapshot
         return None
+
 
 def extract_identity(body: Any) -> Any:
     if not isinstance(body, dict):

@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+
 def validate_paths(paths: Dict) -> List[str]:
     """
     Проверяет наличие параметра paths в OpenAPI/Swagger схеме
@@ -12,6 +13,7 @@ def validate_paths(paths: Dict) -> List[str]:
     if not paths:
         errors.append("Schema не содержит paths.")
     return errors
+
 
 def validate_parameters(parameters: List[Dict], path: str, method: str) -> List[str]:
     """
@@ -52,6 +54,7 @@ def validate_request_bodies(request_body: Dict, path: str, method: str) -> List[
             warnings.append(f"{method} {path}: requestBody без content")
     return warnings
 
+
 def validate_responses(responses: Dict, path: str, method: str) -> List[str]:
     """
     Проверяет наличие description в ответах endpoint.
@@ -67,4 +70,3 @@ def validate_responses(responses: Dict, path: str, method: str) -> List[str]:
         if "description" not in resp:
             warnings.append(f"{method} {path}: response {status} без description")
     return warnings
-

@@ -6,15 +6,16 @@ class StateManager:
     def __init__(self):
         self.values: Dict[str, StateValue] = {}
 
-    def save(self,
-             key: str,
-             value: Any,
-             source_path: str,
-             source_method: str,
-             source_field: str,
-             json_path: str | None = None,
-             resource: str | None = None,
-             request_index: int | None = None,
+    def save(
+        self,
+        key: str,
+        value: Any,
+        source_path: str,
+        source_method: str,
+        source_field: str,
+        json_path: str | None = None,
+        resource: str | None = None,
+        request_index: int | None = None,
     ) -> None:
         self.values[key] = StateValue(
             key=key,
@@ -40,17 +41,14 @@ class StateManager:
 
     def as_dict(self) -> dict[str, Any]:
 
-        return {
-            key: state.value
-            for key, state in self.values.items()
-        }
+        return {key: state.value for key, state in self.values.items()}
 
     def clear(self) -> None:
         self.values.clear()
 
     def get_state(
-            self,
-            key: str,
+        self,
+        key: str,
     ) -> Optional[StateValue]:
         return self.values.get(key)
 

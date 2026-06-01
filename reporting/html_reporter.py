@@ -184,8 +184,7 @@ class HtmlReporter:
 
         blocks = []
         for index, issue, result in problems:
-            blocks.append(
-                f"""
+            blocks.append(f"""
 <div class="problem">
     <h3>Проблема {index}: {escape(issue)}</h3>
     <p>{escape(self._describe_issue(issue))}</p>
@@ -205,14 +204,14 @@ class HtmlReporter:
 
     <h4>Предыдущие запросы этого сценария</h4>
     {self._render_previous_requests(results, result)}
-</div>"""
-            )
+</div>""")
 
         return "".join(blocks)
 
     def _render_previous_requests(self, results, target) -> str:
         previous = [
-            result for result in results
+            result
+            for result in results
             if result.iteration == target.iteration
             and result.scenario_id == target.scenario_id
             and (result.scenario_step or 0) < (target.scenario_step or 0)
@@ -233,10 +232,14 @@ class HtmlReporter:
             f"<strong>{len(results)}</strong>.</p>"
         )
 
-        for iteration, iteration_results in self._group_by(results, "iteration").items():
+        for iteration, iteration_results in self._group_by(
+            results, "iteration"
+        ).items():
             blocks.append(f"<h3>Итерация {escape(str(iteration))}</h3>")
 
-            for scenario_id, scenario_results in self._group_by(iteration_results, "scenario_id").items():
+            for scenario_id, scenario_results in self._group_by(
+                iteration_results, "scenario_id"
+            ).items():
                 blocks.append(f"<h4>Сценарий {escape(str(scenario_id))}</h4>")
                 blocks.append(self._render_result_table(scenario_results))
 
@@ -292,7 +295,9 @@ class HtmlReporter:
     def _response_data(self, result):
         return {
             "status_code": result.status_code,
-            "elapsed_ms": round(result.elapsed_ms, 2) if result.elapsed_ms is not None else None,
+            "elapsed_ms": (
+                round(result.elapsed_ms, 2) if result.elapsed_ms is not None else None
+            ),
             "headers": self._redact(result.response_headers),
             "body": self._redact(result.response_body),
             "error": result.error,
@@ -312,7 +317,7 @@ class HtmlReporter:
             reverse=True,
         )
 
-        for report in reports[self.MAX_REPORTS:]:
+        for report in reports[self.MAX_REPORTS :]:
             try:
                 report.unlink()
             except OSError:
@@ -321,7 +326,9 @@ class HtmlReporter:
     def _group_by(self, results, attribute: str):
         groups = {}
         for result in results:
-            groups.setdefault(getattr(result, attribute) or "unknown", []).append(result)
+            groups.setdefault(getattr(result, attribute) or "unknown", []).append(
+                result
+            )
         return groups
 
     def _issues(self, result) -> list[str]:
@@ -337,7 +344,12 @@ class HtmlReporter:
         if isinstance(value, dict):
             result = {}
             for key, item in value.items():
-                if str(key).lower() in {"authorization", "token", "access_token", "password"}:
+                if str(key).lower() in {
+                    "authorization",
+                    "token",
+                    "access_token",
+                    "password",
+                }:
                     result[key] = "<redacted>"
                 else:
                     result[key] = self._redact(item)

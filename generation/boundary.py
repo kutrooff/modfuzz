@@ -23,7 +23,12 @@ def generate_boundary_cases(endpoints: List[Endpoint]) -> List[TestCase]:
             elif param.type_ == "string":
                 min_length = param.schema.get("minLength", 0)
                 max_length = param.schema.get("maxLength", 10)
-                boundary_values = ["", "a" * min_length, "a" * max_length, "a" * (max_length + 1)]
+                boundary_values = [
+                    "",
+                    "a" * min_length,
+                    "a" * max_length,
+                    "a" * (max_length + 1),
+                ]
 
             else:
                 boundary_values = [param.example or "example"]
@@ -43,9 +48,13 @@ def generate_boundary_cases(endpoints: List[Endpoint]) -> List[TestCase]:
                 body = None
                 if endpoint.request_body:
                     # Для body используем пример, если есть
-                    body = endpoint.request_body.schema.get("example", {"example_field": "example"})
+                    body = endpoint.request_body.schema.get(
+                        "example", {"example_field": "example"}
+                    )
 
-                expected_statuses = list(endpoint.responses.keys()) if endpoint.responses else [200]
+                expected_statuses = (
+                    list(endpoint.responses.keys()) if endpoint.responses else [200]
+                )
 
                 test_cases.append(
                     TestCase(
@@ -56,7 +65,7 @@ def generate_boundary_cases(endpoints: List[Endpoint]) -> List[TestCase]:
                         headers=headers,
                         body=body,
                         expected_statuses=expected_statuses,
-                        strategy="boundary"
+                        strategy="boundary",
                     )
                 )
 

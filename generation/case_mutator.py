@@ -28,10 +28,14 @@ def apply_case_mutations(
         case.strategy = f"{case.strategy}+mutation"
 
     if locations.path:
-        case.path_params = _mutate_mapping(case.path_params, mutations, mutation_options)
+        case.path_params = _mutate_mapping(
+            case.path_params, mutations, mutation_options
+        )
 
     if locations.query:
-        case.query_params = _mutate_mapping(case.query_params, mutations, mutation_options)
+        case.query_params = _mutate_mapping(
+            case.query_params, mutations, mutation_options
+        )
 
     if locations.headers:
         case.headers = _mutate_mapping(case.headers, mutations, mutation_options)
@@ -83,10 +87,7 @@ def _select_mutations(
 
 
 def _mutation_window(mutations: list[str], start: int, size: int) -> list[str]:
-    return [
-        mutations[(start + offset) % len(mutations)]
-        for offset in range(size)
-    ]
+    return [mutations[(start + offset) % len(mutations)] for offset in range(size)]
 
 
 def _mutations_for_case(case: TestCase, fuzz_config) -> list[str]:

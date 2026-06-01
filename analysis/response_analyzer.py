@@ -2,8 +2,8 @@ from execution.result import ExecutionResult
 from analysis.models import AnalysisResult
 import re
 
-class ResponseAnalyzer:
 
+class ResponseAnalyzer:
 
     SEVERITY_LEVELS = {
         "info": 1,
@@ -43,8 +43,9 @@ class ResponseAnalyzer:
         if result.status_code is not None and result.status_code >= 500:
             analysis.issues.append("server_error")
             self._set_severity(analysis, "high")
+
     def _check_slow_response(self, result, analysis):
-        if (result.elapsed_ms is not None and result.elapsed_ms > 2000):
+        if result.elapsed_ms is not None and result.elapsed_ms > 2000:
             analysis.issues.append("slow_response")
 
             self._set_severity(analysis, "medium")
@@ -79,9 +80,8 @@ class ResponseAnalyzer:
 
         text = str(body).lower()
 
-        if (
-            result.status_code == 200
-            and any(pattern in text for pattern in self.INVALID_BEHAVIOR_PATTERNS)
+        if result.status_code == 200 and any(
+            pattern in text for pattern in self.INVALID_BEHAVIOR_PATTERNS
         ):
             analysis.issues.append("invalid_behavior")
 

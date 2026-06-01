@@ -26,9 +26,7 @@ def check_no_server_error(result: ExecutionResult) -> None:
 
     if result.status_code >= 500:
         result.success = False
-        result.checks.append(
-            f"server_error: failed, got {result.status_code}"
-        )
+        result.checks.append(f"server_error: failed, got {result.status_code}")
     else:
         result.checks.append("server_error: passed")
 

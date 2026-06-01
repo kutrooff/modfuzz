@@ -7,29 +7,20 @@ from schema.parser import parse_openapi
 from state.config import load_state_config
 from generation.config import load_fuzz_config
 
+
 async def main():
 
-    parser = argparse.ArgumentParser(
-        description="Modular API fuzzing framework"
-    )
+    parser = argparse.ArgumentParser(description="Modular API fuzzing framework")
 
-    parser.add_argument(
-        "--schema",
-        required=True,
-        help="Path or URL to OpenAPI schema"
-    )
+    parser.add_argument("--schema", required=True, help="Path or URL to OpenAPI schema")
 
-    parser.add_argument(
-        "--base-url",
-        required=True,
-        help="Base URL of target API"
-    )
+    parser.add_argument("--base-url", required=True, help="Base URL of target API")
 
     parser.add_argument(
         "--mode",
         choices=["stateless", "stateful"],
         default="stateless",
-        help="Fuzzing mode"
+        help="Fuzzing mode",
     )
 
     parser.add_argument(
@@ -61,6 +52,7 @@ async def main():
         await runner.run_stateful(endpoints)
     else:
         await runner.run_stateless(endpoints)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

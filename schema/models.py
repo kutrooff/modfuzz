@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 
+
 @dataclass
 class Parameter:
     """
@@ -14,12 +15,14 @@ class Parameter:
         schema: Ограничения параметра (min, max, enum, pattern и т.д.).
         example: Пример значения параметра, если указан в спецификации.
     """
+
     name: str
     in_: str  # 'path', 'query', 'header', 'cookie'
     type_: str  # 'string', 'integer', 'boolean'
     required: bool = False
     schema: Dict[str, Any] = field(default_factory=dict)
     example: Any = None
+
 
 @dataclass
 class RequestBody:
@@ -31,9 +34,11 @@ class RequestBody:
         schema: Схема структуры тела запроса.
         required: Обязательность наличия тела запроса.
     """
+
     content_type: str = "application/json"  # MIME тип
     schema: Dict[str, Any] = field(default_factory=dict)
     required: bool = True
+
 
 @dataclass
 class Response:
@@ -46,10 +51,12 @@ class Response:
         content_type: MIME тип тела ответа ('application/json' по умолчанию).
         schema: Схема структуры данных ответа.
     """
+
     status_code: str
     description: str = ""
     content_type: str = "application/json"
     schema: Dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class Endpoint:
@@ -66,6 +73,7 @@ class Endpoint:
         summary: Краткое описание операции.
         description: Подробное описание операции.
     """
+
     path: str
     method: str  # 'GET', 'POST', 'PUT', 'DELETE'
     parameters: List[Parameter] = field(default_factory=list)
@@ -76,6 +84,7 @@ class Endpoint:
     description: str = ""
     operation_id: str = ""
     requires_auth: bool = False
+
 
 @dataclass
 class TestCase:
@@ -92,6 +101,7 @@ class TestCase:
         expected_statuses: Список ожидаемых HTTP кодов.
         strategy: Стратегия генерации теста ('example', 'boundary', 'random').
     """
+
     endpoint: Endpoint
     # возможно вместо этого необходимо использовать case.endpoint.method
     method: str

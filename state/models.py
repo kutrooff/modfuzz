@@ -3,11 +3,13 @@ from typing import Any, List, Optional
 from schema.models import Endpoint
 import time
 
+
 @dataclass
 class StateValue:
     """
     Описывает значение текущего состояния
     """
+
     key: str
     value: Any
     source_path: str
@@ -26,6 +28,7 @@ class OperationLink:
     """
     Описывает связь между операцией-источником и операцией-потребителем
     """
+
     source: Endpoint
     target: Endpoint
 
@@ -40,20 +43,23 @@ class OperationLink:
     confidence: float = 0.0
     reason: str = ""
 
+
 @dataclass
 class DependencyGraph:
     links: List[OperationLink] = field(default_factory=list)
 
     def consumers_for(self, endpoint: Endpoint) -> List[OperationLink]:
         return [
-            link for link in self.links
+            link
+            for link in self.links
             if link.source.path == endpoint.path
-               and link.source.method == endpoint.method
+            and link.source.method == endpoint.method
         ]
 
     def producers_for(self, endpoint: Endpoint) -> List[OperationLink]:
         return [
-            link for link in self.links
+            link
+            for link in self.links
             if link.target.path == endpoint.path
             and link.target.method == endpoint.method
         ]

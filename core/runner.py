@@ -22,7 +22,12 @@ from generation.case_mutator import apply_case_mutations
 
 class FuzzingRunner:
 
-    def __init__(self, base_url: str, fuzz_config: FuzzingConfig, state_config: StateConfig | None = None):
+    def __init__(
+        self,
+        base_url: str,
+        fuzz_config: FuzzingConfig,
+        state_config: StateConfig | None = None,
+    ):
 
         self.base_url = base_url
         self.fuzz_config = fuzz_config or FuzzingConfig()
@@ -34,15 +39,13 @@ class FuzzingRunner:
         self.html_reporter = HtmlReporter()
         self.state_config = state_config
 
-    async def run_stateless(self,endpoints: List[Endpoint]):
+    async def run_stateless(self, endpoints: List[Endpoint]):
 
         all_results = []
 
         mutations = self.fuzz_config.mutations
 
-        async with AsyncHttpExecutor(
-            self.base_url
-        ) as http_executor:
+        async with AsyncHttpExecutor(self.base_url) as http_executor:
 
             executor = Executor(http_executor)
 
@@ -51,8 +54,8 @@ class FuzzingRunner:
             for iteration in range(self.fuzz_config.iterations):
 
                 self.console.print_iteration(
-                    iteration=iteration + 1,
-                    mutations=mutations)
+                    iteration=iteration + 1, mutations=mutations
+                )
 
                 cases = []
 
@@ -86,14 +89,16 @@ class FuzzingRunner:
 
         return all_results
 
-
     def _filter_endpoints(self, endpoints):
         config = self.fuzz_config
 
         result = []
 
         for endpoint in endpoints:
-            if config.target_methods and endpoint.method.upper() not in config.target_methods:
+            if (
+                config.target_methods
+                and endpoint.method.upper() not in config.target_methods
+            ):
                 continue
 
             if config.include_paths and endpoint.path not in config.include_paths:
@@ -106,12 +111,10 @@ class FuzzingRunner:
 
         return result
 
-
     async def run_stateful(
-            self,
-            endpoints: List[Endpoint],
+        self,
+        endpoints: List[Endpoint],
     ):
-
 
         all_results = []
 
@@ -119,17 +122,11 @@ class FuzzingRunner:
 
         builder = StatefulScenarioBuilder(state_config=self.state_config)
 
-        base_cases = generate_examples(
-            self._filter_endpoints(endpoints)
-        )
+        base_cases = generate_examples(self._filter_endpoints(endpoints))
 
-        sequences = builder.build_sequences(
-            base_cases
-        )
+        sequences = builder.build_sequences(base_cases)
 
-        async with AsyncHttpExecutor(
-                self.base_url
-        ) as http_executor:
+        async with AsyncHttpExecutor(self.base_url) as http_executor:
 
             executor = StatefulExecutor(
                 http_executor,
@@ -164,15 +161,9 @@ class FuzzingRunner:
                         else:
                             mutated_case = deepcopy(case)
 
-                        mutated_sequence.append(
-                            mutated_case
-                        )
+                        mutated_sequence.append(mutated_case)
 
-                    sequence_results = (
-                        await executor.run_sequence(
-                            mutated_sequence
-                        )
-                    )
+                    sequence_results = await executor.run_sequence(mutated_sequence)
 
                     self._mark_results_context(
                         results=sequence_results,
@@ -180,21 +171,13 @@ class FuzzingRunner:
                         scenario_id=f"stateful-scenario-{sequence_index}",
                     )
 
-                    self._process_results(
-                        sequence_results
-                    )
+                    self._process_results(sequence_results)
 
-                    all_results.extend(
-                        sequence_results
-                    )
+                    all_results.extend(sequence_results)
 
-        self._finalize_session(
-            all_results,
-            mode="stateful"
-        )
+        self._finalize_session(all_results, mode="stateful")
 
         return all_results
-
 
     def _process_results(self, results):
 
@@ -204,23 +187,15 @@ class FuzzingRunner:
 
             result.analysis = analysis
 
-            self.console.print_result(
-                result
-            )
+            self.console.print_result(result)
 
             issues = analysis.issues
 
             for issue in issues:
 
-                self.console.print_finding(
-                    issue,
-                    result
-                )
+                self.console.print_finding(issue, result)
 
-    def _count_findings(
-        self,
-        results
-    ):
+    def _count_findings(self, results):
 
         findings_counter = Counter()
 
@@ -234,46 +209,28 @@ class FuzzingRunner:
 
         return findings_counter
 
-    def _finalize_session(
-        self,
-        results,
-        mode
-    ):
+    def _finalize_session(self, results, mode):
 
-        findings_counter = self._count_findings(
-            results
-        )
+        findings_counter = self._count_findings(results)
 
         self.console.print_summary(
             total_requests=len(results),
-            total_findings=sum(
-                findings_counter.values()
-            ),
-            findings_counter=findings_counter
+            total_findings=sum(findings_counter.values()),
+            findings_counter=findings_counter,
         )
 
         report_path = self.json_reporter.export(
-            results=results,
-            findings_counter=findings_counter,
-            mode=mode
+            results=results, findings_counter=findings_counter, mode=mode
         )
 
-        self.console.print_report_saved(
-            report_path,
-            report_type="JSON"
-        )
+        self.console.print_report_saved(report_path, report_type="JSON")
 
         if mode == "stateful":
             html_report_path = self.html_reporter.export(
-                results=results,
-                findings_counter=findings_counter,
-                mode=mode
+                results=results, findings_counter=findings_counter, mode=mode
             )
 
-            self.console.print_report_saved(
-                html_report_path,
-                report_type="HTML"
-            )
+            self.console.print_report_saved(html_report_path, report_type="HTML")
 
     def _should_mutate_case(self, case):
         role = getattr(case, "role", "target")

@@ -35,7 +35,7 @@ class StatefulExecutor:
         extractor: StateExtractor | None = None,
         resolver: StateResolver | None = None,
         state_config: StateConfig | None = None,
-        ):
+    ):
 
         self.http_executor = http_executor
         self.state_manager = state_manager or StateManager()
@@ -51,12 +51,12 @@ class StatefulExecutor:
         )
 
     async def run_case(
-            self,
-            case: TestCase,
-            links: List[OperationLink] | None = None,
-            request_index: int | None = None,
-            incoming_links=None,
-            outgoing_links=None,
+        self,
+        case: TestCase,
+        links: List[OperationLink] | None = None,
+        request_index: int | None = None,
+        incoming_links=None,
+        outgoing_links=None,
     ) -> ExecutionResult:
 
         resolved_case = self.resolver.resolve(case, incoming_links or [])
@@ -66,7 +66,7 @@ class StatefulExecutor:
         result = run_default_checks(result)
         result.analysis = self.analyzer.analyze(result)
 
-        extracted = self.extractor.extract(result ,outgoing_links or [])
+        extracted = self.extractor.extract(result, outgoing_links or [])
         for item in extracted:
             self.state_manager.save(
                 key=item.key,
@@ -79,16 +79,13 @@ class StatefulExecutor:
                 request_index=request_index,
             )
 
-
         return result
 
     async def run_sequence(self, cases: List[TestCase]) -> List[ExecutionResult]:
         results: List[ExecutionResult] = []
         self.state_manager.clear()
 
-        graph = self.dependency_analyzer.analyze(
-            [case.endpoint for case in cases]
-        )
+        graph = self.dependency_analyzer.analyze([case.endpoint for case in cases])
 
         for request_index, case in enumerate(cases):
             incoming_links = graph.producers_for(case.endpoint)
@@ -124,9 +121,9 @@ class StatefulExecutor:
         return results
 
     def _state_resolution_result(
-            self,
-            case: TestCase,
-            exc: StateResolutionError,
+        self,
+        case: TestCase,
+        exc: StateResolutionError,
     ) -> ExecutionResult:
         analysis = AnalysisResult(
             issues=["state_resolution_failed"],

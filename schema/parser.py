@@ -1,6 +1,7 @@
 from typing import List, Dict
 from schema.models import Endpoint, Parameter, RequestBody, Response
 
+
 def parse_openapi(schema: Dict) -> List[Endpoint]:
 
     valid_methods = {
@@ -21,7 +22,7 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
             if method.lower() not in valid_methods:
                 continue
 
-            all_parameters = (methods.get("parameters", []) + info.get("parameters", []))
+            all_parameters = methods.get("parameters", []) + info.get("parameters", [])
 
             parameters = _parse_parameters(all_parameters, schema)
 
@@ -40,11 +41,12 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
                 responses=responses,
                 tags=info.get("tags", []),
                 operation_id=info.get("operationId", ""),
-                requires_auth=_requires_auth(info)
+                requires_auth=_requires_auth(info),
             )
             endpoints.append(endpoint)
 
     return endpoints
+
 
 def _parse_parameters(all_parameters: List[Dict], schema: dict):
     parameters = []
@@ -65,6 +67,7 @@ def _parse_parameters(all_parameters: List[Dict], schema: dict):
 
     return parameters
 
+
 def _parse_request_body(info: dict, schema: dict):
     request_body = None
     if "requestBody" in info:
@@ -82,14 +85,13 @@ def _parse_request_body(info: dict, schema: dict):
 
     return request_body
 
+
 def _parse_responses(info: dict, schema: dict):
     responses = {}
 
     for status, resp in info.get("responses", {}).items():
         raw_schema = (
-            resp.get("content", {})
-            .get("application/json", {})
-            .get("schema", {})
+            resp.get("content", {}).get("application/json", {}).get("schema", {})
         )
 
         response_schema = resolve_schema(raw_schema, schema)
@@ -102,6 +104,7 @@ def _parse_responses(info: dict, schema: dict):
         )
 
     return responses
+
 
 def resolve_ref(ref: str, schema: dict):
     path = ref.replace("#/", "").split("/")
@@ -117,14 +120,12 @@ def resolve_ref(ref: str, schema: dict):
 
     return current
 
+
 def resolve_schema(schema_fragment, schema: dict, seen: set[str] | None = None):
     seen = seen or set()
 
     if isinstance(schema_fragment, list):
-        return [
-            resolve_schema(item, schema, seen)
-            for item in schema_fragment
-        ]
+        return [resolve_schema(item, schema, seen) for item in schema_fragment]
 
     if not isinstance(schema_fragment, dict):
         return schema_fragment
@@ -141,9 +142,7 @@ def resolve_schema(schema_fragment, schema: dict, seen: set[str] | None = None):
             seen | {ref},
         )
         siblings = {
-            key: value
-            for key, value in schema_fragment.items()
-            if key != "$ref"
+            key: value for key, value in schema_fragment.items() if key != "$ref"
         }
 
         if not siblings:
@@ -166,15 +165,12 @@ def resolve_schema(schema_fragment, schema: dict, seen: set[str] | None = None):
             if isinstance(item, dict):
                 merged = _merge_schema_dicts(merged, item)
 
-        extra = {
-            key: value
-            for key, value in resolved.items()
-            if key != "allOf"
-        }
+        extra = {key: value for key, value in resolved.items() if key != "allOf"}
 
         return _merge_schema_dicts(merged, extra)
 
     return resolved
+
 
 def _merge_schema_dicts(base: dict, extra: dict) -> dict:
     merged = dict(base)
@@ -188,8 +184,7 @@ def _merge_schema_dicts(base: dict, extra: dict) -> dict:
     if "required" in base or "required" in extra:
         merged["required"] = list(
             dict.fromkeys(
-                list(base.get("required", []))
-                + list(extra.get("required", []))
+                list(base.get("required", [])) + list(extra.get("required", []))
             )
         )
 
@@ -202,6 +197,7 @@ def _merge_schema_dicts(base: dict, extra: dict) -> dict:
         merged["type"] = "object"
 
     return merged
+
 
 def _requires_auth(info: dict) -> bool:
     return bool(info.get("security"))

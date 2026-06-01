@@ -2,10 +2,8 @@ from typing import List
 
 from schema.models import Endpoint, TestCase
 
-LOGIN_EXAMPLES = {
-    "username": "admin",
-    "password": "admin"
-}
+LOGIN_EXAMPLES = {"username": "admin", "password": "admin"}
+
 
 def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
     """
@@ -32,9 +30,7 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
 
         if endpoint.requires_auth:
 
-            headers["Authorization"] = (
-                "Bearer $state.auth.token"
-            )
+            headers["Authorization"] = "Bearer $state.auth.token"
 
         body = None
 
@@ -43,8 +39,6 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
 
         if endpoint.request_body:
             schema = endpoint.request_body.schema
-
-
 
             if schema.get("type") == "object":
                 body = {}
@@ -85,7 +79,7 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
             headers=headers,
             body=body,
             expected_statuses=expected_statuses,
-            strategy="example"
+            strategy="example",
         )
         test_cases.append(test_case)
 

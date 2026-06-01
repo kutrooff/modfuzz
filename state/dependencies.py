@@ -4,7 +4,7 @@ import re
 
 from schema.models import Endpoint
 from state.models import DependencyGraph, OperationLink
-from state.config import StateConfig, StateLinkOverride
+from state.config import StateConfig
 
 
 @dataclass(frozen=True)
@@ -41,22 +41,17 @@ class DependencyAnalyzer:
     def analyze(self, endpoints: List[Endpoint]) -> DependencyGraph:
         graph = DependencyGraph()
 
-        producers = [
-            endpoint for endpoint in endpoints
-            if self._is_producer(endpoint)
-        ]
+        producers = [endpoint for endpoint in endpoints if self._is_producer(endpoint)]
 
-        consumers = [
-            endpoint for endpoint in endpoints
-            if self._is_consumer(endpoint)
-        ]
+        consumers = [endpoint for endpoint in endpoints if self._is_consumer(endpoint)]
 
         for producer in producers:
             produced_fields = self._extract_response_fields(producer)
 
             for consumer in consumers:
                 path_params = [
-                    param for param in consumer.parameters
+                    param
+                    for param in consumer.parameters
                     if param.in_ in {"path", "query"}
                 ]
 
@@ -152,7 +147,10 @@ class DependencyAnalyzer:
 
         return False
 
-    def _has_success_response(self,endpoint: Endpoint,) -> bool:
+    def _has_success_response(
+        self,
+        endpoint: Endpoint,
+    ) -> bool:
 
         for status in endpoint.responses.keys():
 
@@ -178,9 +176,9 @@ class DependencyAnalyzer:
         return fields
 
     def _flatten_schema_fields(
-            self,
-            schema: dict,
-            prefix: str = "$",
+        self,
+        schema: dict,
+        prefix: str = "$",
     ) -> List[ResponseField]:
         fields: List[ResponseField] = []
 
@@ -239,13 +237,7 @@ class DependencyAnalyzer:
         return fields
 
     def _normalize_name(self, value: str) -> str:
-        return (
-            value
-            .replace("_", "")
-            .replace("-", "")
-            .replace(".", "")
-            .lower()
-        )
+        return value.replace("_", "").replace("-", "").replace(".", "").lower()
 
     def _score_candidate(self, producer, consumer, target_param, field: ResponseField):
         score = 0.0
@@ -258,9 +250,8 @@ class DependencyAnalyzer:
             target_param.name,
         )
 
-        producer_matches_target = (
-            target_resource
-            and self._resource_matches(producer_resource, target_resource)
+        producer_matches_target = target_resource and self._resource_matches(
+            producer_resource, target_resource
         )
 
         if producer_resource == consumer_resource:
@@ -288,7 +279,11 @@ class DependencyAnalyzer:
             score += 0.40
             reasons.append("normalized_name_match")
 
-        if target_norm.endswith("id") and field_norm == "id" and producer_matches_target:
+        if (
+            target_norm.endswith("id")
+            and field_norm == "id"
+            and producer_matches_target
+        ):
             score += 0.35
             reasons.append("producer_id_matches_target_id")
 
@@ -297,9 +292,9 @@ class DependencyAnalyzer:
             reasons.append("producer_id_does_not_match_target_resource")
 
         if (
-                target_param.in_ == "path"
-                and target_norm == field_norm
-                and not producer_matches_target
+            target_param.in_ == "path"
+            and target_norm == field_norm
+            and not producer_matches_target
         ):
             score -= 0.25
             reasons.append("foreign_key_not_preferred_for_path_param")
@@ -324,7 +319,9 @@ class DependencyAnalyzer:
             score += 0.15
             reasons.append("uuid_fallback")
 
-        if field.json_path.startswith("$.data.") or field.json_path.startswith("$.result."):
+        if field.json_path.startswith("$.data.") or field.json_path.startswith(
+            "$.result."
+        ):
             score += 0.10
             reasons.append("common_wrapper_path")
 
@@ -335,10 +332,11 @@ class DependencyAnalyzer:
 
         for suffix in ("id", "uuid", "key"):
             if param_norm.endswith(suffix) and len(param_norm) > len(suffix):
-                return param_norm[:-len(suffix)]
+                return param_norm[: -len(suffix)]
 
         segments = [
-            part for part in path.split("/")
+            part
+            for part in path.split("/")
             if part and not part.startswith("{") and part != "*"
         ]
         marker = "{" + param_name + "}"
@@ -346,7 +344,8 @@ class DependencyAnalyzer:
         for index, part in enumerate(path.split("/")):
             if part == marker:
                 previous = [
-                    segment for segment in path.split("/")[:index]
+                    segment
+                    for segment in path.split("/")[:index]
                     if segment and not segment.startswith("{") and segment != "*"
                 ]
                 return previous[-1] if previous else None
@@ -364,7 +363,9 @@ class DependencyAnalyzer:
             for segment in self._resource_segments(path)
         )
 
-    def _endpoint_metadata_matches(self, endpoint: Endpoint, resource: str | None) -> bool:
+    def _endpoint_metadata_matches(
+        self, endpoint: Endpoint, resource: str | None
+    ) -> bool:
         if not resource:
             return False
 
@@ -434,9 +435,9 @@ class DependencyAnalyzer:
         return best_link
 
     def _apply_config_overrides(
-            self,
-            graph: DependencyGraph,
-            endpoints: List[Endpoint],
+        self,
+        graph: DependencyGraph,
+        endpoints: List[Endpoint],
     ) -> None:
         for override in self.config.links:
             source = self._find_endpoint(
@@ -453,14 +454,11 @@ class DependencyAnalyzer:
             if source is None or target is None:
                 continue
 
-
             graph.links.append(
                 OperationLink(
                     source=source,
                     target=target,
-                    source_field=self._field_from_json_path(
-                        override.source_json_path
-                    ),
+                    source_field=self._field_from_json_path(override.source_json_path),
                     source_json_path=override.source_json_path,
                     state_key=override.state_key,
                     target_param=override.target_param,
@@ -473,10 +471,10 @@ class DependencyAnalyzer:
             )
 
     def _find_endpoint(
-            self,
-            endpoints: List[Endpoint],
-            method: str,
-            path: str,
+        self,
+        endpoints: List[Endpoint],
+        method: str,
+        path: str,
     ) -> Endpoint | None:
         for endpoint in endpoints:
             if endpoint.method.upper() == method and endpoint.path == path:

@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 
-def load_schema(source: str)-> dict:
+def load_schema(source: str) -> dict:
     """
     Загружает OpenAPI спецификацию из локального файла или URL.
     Поддерживаются JSON и YAML.
@@ -20,7 +20,9 @@ def load_schema(source: str)-> dict:
         try:
             text = path.read_text(encoding="utf-8")
         except Exception as e:
-            raise ValueError(f"Не удалось прочитать файл схемы, получена следующая ошибка: {e}")
+            raise ValueError(
+                f"Не удалось прочитать файл схемы, получена следующая ошибка: {e}"
+            )
 
     try:
         return json.loads(text)

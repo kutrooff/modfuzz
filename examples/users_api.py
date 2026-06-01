@@ -6,7 +6,6 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Response
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
-
 app = FastAPI(
     title="ModFuzz Demo Microservices API",
     version="2.0.0",
@@ -271,7 +270,9 @@ def delete_user(userId: int):
 
 
 @catalog_router.post("/products", status_code=201)
-def create_product(product: ProductCreate, response: Response, authorization: str | None = Header(None)):
+def create_product(
+    product: ProductCreate, response: Response, authorization: str | None = Header(None)
+):
     global next_product_id
 
     if product.name.lower() == "crash":
@@ -548,7 +549,9 @@ def create_shipment(shipment: ShipmentCreate, response: Response):
         raise HTTPException(status_code=404, detail="Order not found")
 
     if order["status"] != "paid":
-        raise HTTPException(status_code=409, detail="Order must be paid before shipment")
+        raise HTTPException(
+            status_code=409, detail="Order must be paid before shipment"
+        )
 
     if shipment.address.lower() == "lost":
         return {

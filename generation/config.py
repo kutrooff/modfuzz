@@ -7,7 +7,6 @@ import yaml
 
 from generation.mutation_engine import MutationEngine
 
-
 SUPPORTED_GENERATORS = {
     "example",
     "random",
@@ -57,8 +56,12 @@ class EndpointOverride:
 class FuzzingConfig:
     iterations: int = 3
     seed: int | None = None
-    generators: list[str] = field(default_factory=lambda: ["example", "random", "boundary"])
-    mutations: list[str] = field(default_factory=lambda: ["sql_injection", "xss", "boundary_values"])
+    generators: list[str] = field(
+        default_factory=lambda: ["example", "random", "boundary"]
+    )
+    mutations: list[str] = field(
+        default_factory=lambda: ["sql_injection", "xss", "boundary_values"]
+    )
     target_methods: list[str] = field(default_factory=list)
     include_paths: list[str] = field(default_factory=list)
     exclude_paths: list[str] = field(default_factory=list)
@@ -75,7 +78,11 @@ def load_fuzz_config(path: str | None) -> FuzzingConfig:
 
     config_path = Path(path)
     text = config_path.read_text(encoding="utf-8")
-    raw = json.loads(text) if config_path.suffix.lower() == ".json" else yaml.safe_load(text)
+    raw = (
+        json.loads(text)
+        if config_path.suffix.lower() == ".json"
+        else yaml.safe_load(text)
+    )
 
     return parse_fuzz_config(raw or {})
 
@@ -87,19 +94,33 @@ def parse_fuzz_config(raw: dict[str, Any]) -> FuzzingConfig:
     defaults = FuzzingConfig()
     locations = _parse_locations(raw.get("locations"), defaults.locations)
     stateful = _parse_stateful_policy(raw.get("stateful"), defaults.stateful)
-    mutation_policy = _parse_mutation_policy(raw.get("mutation_policy"), defaults.mutation_policy)
+    mutation_policy = _parse_mutation_policy(
+        raw.get("mutation_policy"), defaults.mutation_policy
+    )
 
     config = FuzzingConfig(
-        iterations=_positive_int(raw.get("iterations", defaults.iterations), "iterations"),
+        iterations=_positive_int(
+            raw.get("iterations", defaults.iterations), "iterations"
+        ),
         seed=_optional_int(raw.get("seed", defaults.seed), "seed"),
-        generators=_parse_string_list(raw.get("generators", defaults.generators), "generators"),
-        mutations=_parse_string_list(raw.get("mutations", defaults.mutations), "mutations"),
+        generators=_parse_string_list(
+            raw.get("generators", defaults.generators), "generators"
+        ),
+        mutations=_parse_string_list(
+            raw.get("mutations", defaults.mutations), "mutations"
+        ),
         target_methods=[
             method.upper()
-            for method in _parse_string_list(raw.get("target_methods", defaults.target_methods), "target_methods")
+            for method in _parse_string_list(
+                raw.get("target_methods", defaults.target_methods), "target_methods"
+            )
         ],
-        include_paths=_parse_string_list(raw.get("include_paths", defaults.include_paths), "include_paths"),
-        exclude_paths=_parse_string_list(raw.get("exclude_paths", defaults.exclude_paths), "exclude_paths"),
+        include_paths=_parse_string_list(
+            raw.get("include_paths", defaults.include_paths), "include_paths"
+        ),
+        exclude_paths=_parse_string_list(
+            raw.get("exclude_paths", defaults.exclude_paths), "exclude_paths"
+        ),
         locations=locations,
         stateful=stateful,
         mutation_policy=mutation_policy,
@@ -140,7 +161,9 @@ def _parse_locations(raw: Any, defaults: MutationLocations) -> MutationLocations
     )
 
 
-def _parse_stateful_policy(raw: Any, defaults: StatefulMutationPolicy) -> StatefulMutationPolicy:
+def _parse_stateful_policy(
+    raw: Any, defaults: StatefulMutationPolicy
+) -> StatefulMutationPolicy:
     if raw is None:
         return StatefulMutationPolicy(
             mutate_setup_requests=defaults.mutate_setup_requests,
@@ -162,7 +185,9 @@ def _parse_stateful_policy(raw: Any, defaults: StatefulMutationPolicy) -> Statef
             "stateful.mutate_target_requests",
         ),
         mutate_verification_requests=_bool_value(
-            raw.get("mutate_verification_requests", defaults.mutate_verification_requests),
+            raw.get(
+                "mutate_verification_requests", defaults.mutate_verification_requests
+            ),
             "stateful.mutate_verification_requests",
         ),
         mutate_cleanup_requests=_bool_value(
@@ -190,9 +215,7 @@ def _parse_mutation_policy(raw: Any, defaults: MutationPolicy) -> MutationPolicy
     mode = mode.strip()
 
     if mode not in SUPPORTED_MUTATION_POLICY_MODES:
-        raise ValueError(
-            f"Unknown mutation policy mode: {mode}"
-        )
+        raise ValueError(f"Unknown mutation policy mode: {mode}")
 
     return MutationPolicy(
         mode=mode,
@@ -203,7 +226,9 @@ def _parse_mutation_policy(raw: Any, defaults: MutationPolicy) -> MutationPolicy
     )
 
 
-def _parse_overrides(raw: Any, default_locations: MutationLocations) -> list[EndpointOverride]:
+def _parse_overrides(
+    raw: Any, default_locations: MutationLocations
+) -> list[EndpointOverride]:
     if raw is None:
         return []
 
@@ -229,9 +254,13 @@ def _parse_overrides(raw: Any, default_locations: MutationLocations) -> list[End
         overrides.append(
             EndpointOverride(
                 endpoint=_normalize_endpoint(endpoint),
-                mutations=_parse_string_list(item.get("mutations", []), f"overrides[{index}].mutations"),
+                mutations=_parse_string_list(
+                    item.get("mutations", []), f"overrides[{index}].mutations"
+                ),
                 locations=override_locations,
-                mutation_options=_parse_mutation_options(item.get("mutation_options", {})),
+                mutation_options=_parse_mutation_options(
+                    item.get("mutation_options", {})
+                ),
             )
         )
 
@@ -318,6 +347,4 @@ def _validate_generators(generators: list[str]) -> None:
     unknown = set(generators) - SUPPORTED_GENERATORS
 
     if unknown:
-        raise ValueError(
-            f"Unknown generators: {', '.join(sorted(unknown))}"
-        )
+        raise ValueError(f"Unknown generators: {', '.join(sorted(unknown))}")

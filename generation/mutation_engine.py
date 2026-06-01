@@ -5,7 +5,6 @@ from string import ascii_letters, digits, punctuation
 
 class MutationEngine:
 
-
     SUPPORTED_MUTATIONS = {
         "sql_injection",
         "xss",
@@ -23,7 +22,7 @@ class MutationEngine:
     SQL_PAYLOADS = [
         "' OR 1=1 --",
         "'; DROP TABLE users; --",
-        "\" OR \"1\"=\"1",
+        '" OR "1"="1',
         "' OR 'a'='a",
         "admin' --",
         "1; SELECT * FROM users",
@@ -36,7 +35,7 @@ class MutationEngine:
         "<script>alert(1)</script>",
         "<img src=x onerror=alert(1)>",
         "<svg/onload=alert(1)>",
-        "\"><script>alert(1)</script>",
+        '"><script>alert(1)</script>',
         "<body onload=alert(1)>",
         "<iframe src=javascript:alert(1)>",
         "<input autofocus onfocus=alert(1)>",
@@ -145,13 +144,12 @@ class MutationEngine:
         if mutation == "null_values":
             return None
 
-        mutated = [
-            self._mutate(item, mutation, options)
-            for item in arr
-        ]
+        mutated = [self._mutate(item, mutation, options) for item in arr]
 
         if mutation == "large_payload":
-            mutated *= self._int_option(mutation_options, "array_repeat", 100, minimum=1)
+            mutated *= self._int_option(
+                mutation_options, "array_repeat", 100, minimum=1
+            )
 
         if mutation == "type_confusion":
             return choice(
@@ -169,17 +167,27 @@ class MutationEngine:
         mutation_options = self._options_for(options, mutation)
 
         if mutation == "sql_injection":
-            return choice(self._list_option(mutation_options, "payloads", self.SQL_PAYLOADS))
+            return choice(
+                self._list_option(mutation_options, "payloads", self.SQL_PAYLOADS)
+            )
 
         if mutation == "xss":
-            return choice(self._list_option(mutation_options, "payloads", self.XSS_PAYLOADS))
+            return choice(
+                self._list_option(mutation_options, "payloads", self.XSS_PAYLOADS)
+            )
 
         if mutation == "large_payload":
-            return value * self._int_option(mutation_options, "string_repeat", 1000, minimum=1)
+            return value * self._int_option(
+                mutation_options, "string_repeat", 1000, minimum=1
+            )
 
         if mutation == "random":
-            min_length = self._int_option(mutation_options, "min_length", 100, minimum=0)
-            max_length = self._int_option(mutation_options, "max_length", 500, minimum=min_length)
+            min_length = self._int_option(
+                mutation_options, "min_length", 100, minimum=0
+            )
+            max_length = self._int_option(
+                mutation_options, "max_length", 500, minimum=min_length
+            )
             return "".join(
                 choice(self.RANDOM_ALPHABET)
                 for _ in range(randint(min_length, max_length))
@@ -189,7 +197,11 @@ class MutationEngine:
             return choice(self.TYPE_CONFUSION_VALUES)
 
         if mutation == "invalid_types":
-            return choice(self._list_option(mutation_options, "values", [12345, True, [], {}, None]))
+            return choice(
+                self._list_option(
+                    mutation_options, "values", [12345, True, [], {}, None]
+                )
+            )
 
         if mutation == "empty_values":
             return ""
@@ -206,16 +218,24 @@ class MutationEngine:
             return -abs(value)
 
         if mutation == "boundary_values":
-            return choice(self._list_option(mutation_options, "numbers", self.BOUNDARY_NUMBERS))
+            return choice(
+                self._list_option(mutation_options, "numbers", self.BOUNDARY_NUMBERS)
+            )
 
         if mutation == "invalid_types":
-            return choice(self._list_option(mutation_options, "values", ["not_an_integer"]))
+            return choice(
+                self._list_option(mutation_options, "values", ["not_an_integer"])
+            )
 
         if mutation == "large_payload":
             return self._int_option(mutation_options, "integer_value", 10**10)
 
         if mutation == "type_confusion":
-            return choice(self._list_option(mutation_options, "values", ["not_a_number", [], {}, True, None]))
+            return choice(
+                self._list_option(
+                    mutation_options, "values", ["not_a_number", [], {}, True, None]
+                )
+            )
 
         if mutation == "empty_values":
             return ""
@@ -232,7 +252,11 @@ class MutationEngine:
             return choice(self._list_option(mutation_options, "values", ["true"]))
 
         if mutation == "type_confusion":
-            return choice(self._list_option(mutation_options, "values", ["not_a_boolean", 1, 0, [], {}, None]))
+            return choice(
+                self._list_option(
+                    mutation_options, "values", ["not_a_boolean", 1, 0, [], {}, None]
+                )
+            )
 
         if mutation == "empty_values":
             return ""
@@ -246,23 +270,21 @@ class MutationEngine:
         unknown = set(mutations) - self.SUPPORTED_MUTATIONS
 
         if unknown:
-            raise ValueError(
-                f"Unknown mutations: {', '.join(sorted(unknown))}"
-            )
+            raise ValueError(f"Unknown mutations: {', '.join(sorted(unknown))}")
 
     def validate_mutation_options(self, options: dict[str, dict]) -> None:
         unknown = set(options) - self.SUPPORTED_MUTATIONS
 
         if unknown:
-            raise ValueError(
-                f"Unknown mutation options: {', '.join(sorted(unknown))}"
-            )
+            raise ValueError(f"Unknown mutation options: {', '.join(sorted(unknown))}")
 
     def _options_for(self, options: dict, mutation: str) -> dict:
         value = options.get(mutation, {})
         return value if isinstance(value, dict) else {}
 
-    def _int_option(self, options: dict, name: str, default: int, minimum: int | None = None) -> int:
+    def _int_option(
+        self, options: dict, name: str, default: int, minimum: int | None = None
+    ) -> int:
         value = options.get(name, default)
 
         if not isinstance(value, int) or isinstance(value, bool):

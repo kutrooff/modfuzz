@@ -4,6 +4,7 @@ from execution.http_client import AsyncHttpExecutor
 from execution.result import ExecutionResult
 from schema.models import TestCase
 
+
 class Executor:
 
     def __init__(
@@ -19,17 +20,11 @@ class Executor:
         case: TestCase,
     ) -> ExecutionResult:
 
-        result = await self.http_executor.send(
-            case
-        )
+        result = await self.http_executor.send(case)
 
-        result = run_default_checks(
-            result
-        )
+        result = run_default_checks(result)
 
-        result.analysis = self.analyzer.analyze(
-            result
-        )
+        result.analysis = self.analyzer.analyze(result)
 
         return result
 
@@ -42,9 +37,7 @@ class Executor:
 
         for case in cases:
 
-            result = await self.run_case(
-                case
-            )
+            result = await self.run_case(case)
 
             results.append(result)
 

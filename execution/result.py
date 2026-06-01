@@ -1,7 +1,8 @@
-from dataclasses import  dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, List
 
 from schema.models import TestCase
+
 
 @dataclass
 class ExecutionResult:

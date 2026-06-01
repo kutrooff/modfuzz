@@ -122,13 +122,17 @@ def _parse_cross_service_assertions(raw: Any) -> list[CrossServiceAssertion]:
         if expect is None:
             expect = {}
         if not isinstance(expect, dict):
-            raise ValueError(f"cross_service_assertions[{index}].expect must be a mapping")
+            raise ValueError(
+                f"cross_service_assertions[{index}].expect must be a mapping"
+            )
 
         expected_statuses = _parse_expected_statuses(
             item.get("expect_status", expect.get("status_code"))
         )
 
-        assertion_type = item.get("type") or item.get("issue") or "cross_service_state_mismatch"
+        assertion_type = (
+            item.get("type") or item.get("issue") or "cross_service_state_mismatch"
+        )
 
         assertions.append(
             CrossServiceAssertion(

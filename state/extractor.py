@@ -31,9 +31,9 @@ class StateExtractor:
     }
 
     def extract(
-            self,
-            result: ExecutionResult,
-            links: List[OperationLink] | None = None,
+        self,
+        result: ExecutionResult,
+        links: List[OperationLink] | None = None,
     ) -> List[ExtractedState]:
         extracted: Dict[str, ExtractedState] = {}
 
@@ -49,10 +49,10 @@ class StateExtractor:
         return list(extracted.values())
 
     def _extract_from_links(
-            self,
-            result: ExecutionResult,
-            links: List[OperationLink],
-            extracted: Dict[str, ExtractedState],
+        self,
+        result: ExecutionResult,
+        links: List[OperationLink],
+        extracted: Dict[str, ExtractedState],
     ) -> None:
         resource_name = self._resource_name_from_path(result.case.endpoint.path)
 
@@ -82,11 +82,7 @@ class StateExtractor:
         if json_path == "$":
             return data
 
-        tokens = [
-            token
-            for token in json_path[1:].lstrip(".").split(".")
-            if token
-        ]
+        tokens = [token for token in json_path[1:].lstrip(".").split(".") if token]
 
         values = [data]
 
@@ -114,10 +110,9 @@ class StateExtractor:
 
         return values[0] if len(values) == 1 else values[0]
 
-
-
-
-    def _extract_from_body(self, result: ExecutionResult, extracted: Dict[str, Any]) -> None:
+    def _extract_from_body(
+        self, result: ExecutionResult, extracted: Dict[str, Any]
+    ) -> None:
 
         body = result.response_body
 
@@ -143,11 +138,11 @@ class StateExtractor:
                 )
 
     def _extract_from_dict(
-            self,
-            body: Dict[str, Any],
-            resource_name: str,
-            extracted: Dict[str, ExtractedState],
-            prefix: str = "$",
+        self,
+        body: Dict[str, Any],
+        resource_name: str,
+        extracted: Dict[str, ExtractedState],
+        prefix: str = "$",
     ) -> None:
         for field_name, value in body.items():
             json_path = f"{prefix}.{field_name}"
@@ -205,14 +200,11 @@ class StateExtractor:
                         )
 
     def _extract_from_headers(
-            self,
-            result: ExecutionResult,
-            extracted: Dict[str, ExtractedState],
+        self,
+        result: ExecutionResult,
+        extracted: Dict[str, ExtractedState],
     ) -> None:
-        headers = {
-            key.lower(): value
-            for key, value in result.response_headers.items()
-        }
+        headers = {key.lower(): value for key, value in result.response_headers.items()}
 
         location = headers.get("location")
 
@@ -232,9 +224,7 @@ class StateExtractor:
         if not last_part:
             return
 
-        resource_name = self._resource_name_from_path(
-            result.case.endpoint.path
-        )
+        resource_name = self._resource_name_from_path(result.case.endpoint.path)
 
         extracted[f"{resource_name}.last_id"] = ExtractedState(
             key=f"{resource_name}.last_id",
@@ -264,12 +254,7 @@ class StateExtractor:
         return parts[-1]
 
     def _is_technical_segment(self, value: str) -> bool:
-        normalized = (
-            value
-            .replace("_", "")
-            .replace("-", "")
-            .lower()
-        )
+        normalized = value.replace("_", "").replace("-", "").lower()
 
         if normalized in {"api", "rest", "gateway", "service", "services"}:
             return True

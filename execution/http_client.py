@@ -6,6 +6,7 @@ import httpx
 from schema.models import TestCase
 from execution.result import ExecutionResult
 
+
 class AsyncHttpExecutor:
 
     def __init__(
@@ -61,7 +62,7 @@ class AsyncHttpExecutor:
             response = await self.client.request(
                 method=case.method.upper(),
                 url=url,
-                params = case.query_params or {},
+                params=case.query_params or {},
                 headers=headers,
                 json=case.body,
             )
@@ -105,12 +106,12 @@ class AsyncHttpExecutor:
         return response.text
 
     def _error_result(
-            self,
-            case: TestCase,
-            url: str,
-            error_type: str,
-            exc: Exception,
-            start: float,
+        self,
+        case: TestCase,
+        url: str,
+        error_type: str,
+        exc: Exception,
+        start: float,
     ) -> ExecutionResult:
         elapsed_ms = (time.perf_counter() - start) * 1000
         return ExecutionResult(

@@ -5,6 +5,7 @@ from schema.models import Endpoint, TestCase
 from state.dependencies import DependencyAnalyzer
 from state.models import OperationLink
 
+
 class StatefulScenarioBuilder:
     def __init__(self, state_config: StateConfig | None = None):
         self.dependency_analyzer = DependencyAnalyzer(state_config)
@@ -15,14 +16,10 @@ class StatefulScenarioBuilder:
 
         sequences: List[List[TestCase]] = []
 
-        sequences.extend(
-            self._build_lifecycle_sequences(test_cases, graph)
-        )
+        sequences.extend(self._build_lifecycle_sequences(test_cases, graph))
 
         if not sequences:
-            sequences.extend(
-                self._build_dependency_pair_sequences(test_cases, graph)
-            )
+            sequences.extend(self._build_dependency_pair_sequences(test_cases, graph))
 
         sequences = [
             self._prepend_prerequisites(sequence, test_cases, graph)
@@ -30,8 +27,7 @@ class StatefulScenarioBuilder:
         ]
 
         sequences = [
-            self._prepend_auth_if_needed(sequence, test_cases)
-            for sequence in sequences
+            self._prepend_auth_if_needed(sequence, test_cases) for sequence in sequences
         ]
 
         return self._dedupe_sequences(sequences)
@@ -51,18 +47,21 @@ class StatefulScenarioBuilder:
             case.body[link.target_param] = reference
 
     def _build_state_reference(self, link: OperationLink) -> str:
-        resource_name = self._resource_name(link.source.path)
         return f"$state.{link.state_key}"
 
     def _find_case(self, cases: List[TestCase], endpoint: Endpoint) -> TestCase | None:
         for case in cases:
-            if case.endpoint.path == endpoint.path and case.endpoint.method == endpoint.method:
+            if (
+                case.endpoint.path == endpoint.path
+                and case.endpoint.method == endpoint.method
+            ):
                 return case
         return None
 
     def _resource_name(self, path: str) -> str:
         parts = [
-            part for part in path.split("/")
+            part
+            for part in path.split("/")
             if part
             and not part.startswith("{")
             and part != "*"
@@ -71,12 +70,7 @@ class StatefulScenarioBuilder:
         return parts[-1] if parts else "resource"
 
     def _is_technical_segment(self, value: str) -> bool:
-        normalized = (
-            value
-            .replace("_", "")
-            .replace("-", "")
-            .lower()
-        )
+        normalized = value.replace("_", "").replace("-", "").lower()
 
         if normalized in {"api", "rest", "gateway", "service", "services"}:
             return True
@@ -108,15 +102,12 @@ class StatefulScenarioBuilder:
         return endpoint.path.lower() in auth_paths
 
     def _prepend_auth_if_needed(
-            self,
-            sequence: List[TestCase],
-            test_cases: List[TestCase],
+        self,
+        sequence: List[TestCase],
+        test_cases: List[TestCase],
     ) -> List[TestCase]:
 
-        requires_auth = any(
-            case.endpoint.requires_auth
-            for case in sequence
-        )
+        requires_auth = any(case.endpoint.requires_auth for case in sequence)
 
         if not requires_auth:
             return sequence
@@ -124,9 +115,7 @@ class StatefulScenarioBuilder:
         if any(self._is_auth_endpoint(case.endpoint) for case in sequence):
             return sequence
 
-        login_case = self._find_login_case(
-            test_cases
-        )
+        login_case = self._find_login_case(test_cases)
 
         if login_case:
             login_case.role = "setup"
@@ -138,10 +127,10 @@ class StatefulScenarioBuilder:
         return sequence
 
     def _prepend_prerequisites(
-            self,
-            sequence: List[TestCase],
-            test_cases: List[TestCase],
-            graph,
+        self,
+        sequence: List[TestCase],
+        test_cases: List[TestCase],
+        graph,
     ) -> List[TestCase]:
         planned: List[TestCase] = []
 
@@ -159,12 +148,12 @@ class StatefulScenarioBuilder:
         return planned
 
     def _append_prerequisites(
-            self,
-            case: TestCase,
-            planned: List[TestCase],
-            test_cases: List[TestCase],
-            graph,
-            visiting: set[tuple[str, str]],
+        self,
+        case: TestCase,
+        planned: List[TestCase],
+        test_cases: List[TestCase],
+        graph,
+        visiting: set[tuple[str, str]],
     ) -> None:
         case_key = self._endpoint_key(case.endpoint)
 
@@ -204,9 +193,9 @@ class StatefulScenarioBuilder:
         visiting.remove(case_key)
 
     def _contains_endpoint(
-            self,
-            cases: List[TestCase],
-            endpoint: Endpoint,
+        self,
+        cases: List[TestCase],
+        endpoint: Endpoint,
     ) -> bool:
         return any(
             self._endpoint_key(case.endpoint) == self._endpoint_key(endpoint)
@@ -217,9 +206,9 @@ class StatefulScenarioBuilder:
         return endpoint.method.upper(), endpoint.path
 
     def _build_dependency_pair_sequences(
-            self,
-            test_cases: List[TestCase],
-            graph,
+        self,
+        test_cases: List[TestCase],
+        graph,
     ) -> List[List[TestCase]]:
         sequences: List[List[TestCase]] = []
 
@@ -241,7 +230,9 @@ class StatefulScenarioBuilder:
 
         return sequences
 
-    def _build_lifecycle_sequences(self, test_cases: List[TestCase], graph) -> List[List[TestCase]]:
+    def _build_lifecycle_sequences(
+        self, test_cases: List[TestCase], graph
+    ) -> List[List[TestCase]]:
         sequences = []
 
         for resource_cases in self._group_cases_by_resource(test_cases).values():
@@ -252,7 +243,9 @@ class StatefulScenarioBuilder:
 
         return sequences
 
-    def _build_lifecycle_sequence(self, cases: List[TestCase], graph) -> List[TestCase] | None:
+    def _build_lifecycle_sequence(
+        self, cases: List[TestCase], graph
+    ) -> List[TestCase] | None:
         create_case = self._find_create_case(cases)
         read_case = self._find_read_case(cases)
         update_case = self._find_update_case(cases)
@@ -281,17 +274,18 @@ class StatefulScenarioBuilder:
             case_copy = deepcopy(case)
             case_copy.role = role
 
-            if (
-                    not self._inject_producer_links(case_copy, sequence[0], graph)
-                    and not self._uses_same_path_template(case_copy, create_copy)
-            ):
+            if not self._inject_producer_links(
+                case_copy, sequence[0], graph
+            ) and not self._uses_same_path_template(case_copy, create_copy):
                 continue
 
             sequence.append(case_copy)
 
         return sequence if len(sequence) > 1 else None
 
-    def _group_cases_by_resource(self, test_cases: List[TestCase]) -> dict[str, List[TestCase]]:
+    def _group_cases_by_resource(
+        self, test_cases: List[TestCase]
+    ) -> dict[str, List[TestCase]]:
         grouped = {}
 
         for case in test_cases:
@@ -318,18 +312,20 @@ class StatefulScenarioBuilder:
         return self._find_by_method(cases, {"DELETE"}, requires_path_param=True)
 
     def _find_by_method(
-            self,
-            cases: List[TestCase],
-            methods: set[str],
-            requires_path_param: bool,
+        self,
+        cases: List[TestCase],
+        methods: set[str],
+        requires_path_param: bool,
     ) -> TestCase | None:
         for case in cases:
             has_path_param = any(
-                param.in_ == "path"
-                for param in case.endpoint.parameters
+                param.in_ == "path" for param in case.endpoint.parameters
             )
 
-            if case.endpoint.method.upper() in methods and has_path_param == requires_path_param:
+            if (
+                case.endpoint.method.upper() in methods
+                and has_path_param == requires_path_param
+            ):
                 return case
 
         return None
@@ -341,8 +337,8 @@ class StatefulScenarioBuilder:
 
         for link in incoming_links:
             if (
-                    link.source.path == source_case.endpoint.path
-                    and link.source.method == source_case.endpoint.method
+                link.source.path == source_case.endpoint.path
+                and link.source.method == source_case.endpoint.method
             ):
                 self._inject_state_reference(case, link)
                 injected = True
@@ -356,7 +352,9 @@ class StatefulScenarioBuilder:
             and source_case.endpoint.method.upper() == "POST"
         )
 
-    def _dedupe_sequences(self, sequences: List[List[TestCase]]) -> List[List[TestCase]]:
+    def _dedupe_sequences(
+        self, sequences: List[List[TestCase]]
+    ) -> List[List[TestCase]]:
         seen = set()
         unique = []
 
@@ -372,8 +370,4 @@ class StatefulScenarioBuilder:
         return unique
 
     def _sequence_key(self, sequence: List[TestCase]):
-        return tuple(
-            (case.endpoint.method, case.endpoint.path)
-            for case in sequence
-        )
-
+        return tuple((case.endpoint.method, case.endpoint.path) for case in sequence)

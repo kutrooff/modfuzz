@@ -1,22 +1,24 @@
 from rich.console import Console
 
+
 class ConsoleReporter:
-    FINDING_LABELS = {"server_error": "Ошибка сервера",
-                      "invalid_behavior": "Некорректное поведение",
-                      "hidden_error": "Скрытая ошибка",
-                      "empty_response": "Пустой ответ",
-                      "state_read_after_create_failed": "Ресурс не читается после создания",
-                      "state_update_failed": "Обновление созданного ресурса не выполнено",
-                      "state_delete_failed": "Удаление созданного ресурса не выполнено",
-                      "state_delete_not_applied": "Ресурс доступен после удаления",
-                      "state_location_id_mismatch": "ID в Location не совпадает с body",
-                      "state_identity_mismatch": "Операция вернула другой ресурс",
-                      "state_update_not_visible": "Изменения не видны после обновления",
-                      "state_resolution_failed": "Не удалось подставить данные состояния",
-                      "cross_service_state_mismatch": "Нарушена межсервисная согласованность",
-                      "invalid_state_transition": "Недопустимый переход состояния",
-                      "referential_integrity_violation": "Нарушена ссылочная целостность",
-                      }
+    FINDING_LABELS = {
+        "server_error": "Ошибка сервера",
+        "invalid_behavior": "Некорректное поведение",
+        "hidden_error": "Скрытая ошибка",
+        "empty_response": "Пустой ответ",
+        "state_read_after_create_failed": "Ресурс не читается после создания",
+        "state_update_failed": "Обновление созданного ресурса не выполнено",
+        "state_delete_failed": "Удаление созданного ресурса не выполнено",
+        "state_delete_not_applied": "Ресурс доступен после удаления",
+        "state_location_id_mismatch": "ID в Location не совпадает с body",
+        "state_identity_mismatch": "Операция вернула другой ресурс",
+        "state_update_not_visible": "Изменения не видны после обновления",
+        "state_resolution_failed": "Не удалось подставить данные состояния",
+        "cross_service_state_mismatch": "Нарушена межсервисная согласованность",
+        "invalid_state_transition": "Недопустимый переход состояния",
+        "referential_integrity_violation": "Нарушена ссылочная целостность",
+    }
 
     def __init__(self):
 
@@ -28,10 +30,12 @@ class ConsoleReporter:
 
         self.console.rule(f"[bold cyan]ФАЗЗИНГ ИТЕРАЦИЯ {iteration}")
 
-        self.console.print("[bold white]АКТИВНЫЕ МУТАЦИИ:[/bold white]", f"[magenta]{mutations}[/magenta]")
+        self.console.print(
+            "[bold white]АКТИВНЫЕ МУТАЦИИ:[/bold white]",
+            f"[magenta]{mutations}[/magenta]",
+        )
 
         self.console.print()
-
 
     def print_result(self, result):
 
@@ -39,17 +43,9 @@ class ConsoleReporter:
 
         method_style = self._method_style(result.case.method)
 
-        result_style = (
-            "green"
-            if result.success
-            else "bold red"
-        )
+        result_style = "green" if result.success else "bold red"
 
-        status = (
-            str(result.status_code)
-            if result.status_code is not None
-            else "ERR"
-        )
+        status = str(result.status_code) if result.status_code is not None else "ERR"
 
         self.console.print(
             f"[{status_style}]"
@@ -64,7 +60,6 @@ class ConsoleReporter:
             f"[/{result_style}]"
         )
 
-
     def print_finding(self, issue_type: str, result):
 
         style = {
@@ -72,15 +67,11 @@ class ConsoleReporter:
             "invalid_behavior": "yellow",
             "hidden_error": "magenta",
             "empty_response": "cyan",
-        }.get(issue_type,"white")
+        }.get(issue_type, "white")
 
         label = self.FINDING_LABELS.get(issue_type, issue_type)
 
-        self.console.print(
-            f"[{style}]"
-            f"[!] {label.upper()}"
-            f"[/{style}]"
-        )
+        self.console.print(f"[{style}]" f"[!] {label.upper()}" f"[/{style}]")
 
         self.console.print(
             f"{result.case.method} "
@@ -91,32 +82,20 @@ class ConsoleReporter:
 
         if result.error:
 
-            self.console.print(
-                f"[red]{result.error}[/red]"
-            )
+            self.console.print(f"[red]{result.error}[/red]")
 
         self.console.print()
 
-
     def print_summary(
-        self,
-        total_requests: int,
-        total_findings: int,
-        findings_counter: dict
+        self, total_requests: int, total_findings: int, findings_counter: dict
     ):
 
         self.console.print()
         self.console.rule("[bold cyan]СВОДКА СЕССИИ")
 
-        self.console.print(
-            f"[bold]Всего запросов:[/bold] "
-            f"{total_requests}"
-        )
+        self.console.print(f"[bold]Всего запросов:[/bold] " f"{total_requests}")
 
-        self.console.print(
-            f"[bold]Найдено проблем:[/bold] "
-            f"{total_findings}"
-        )
+        self.console.print(f"[bold]Найдено проблем:[/bold] " f"{total_findings}")
 
         self.console.print()
 
@@ -124,19 +103,11 @@ class ConsoleReporter:
 
         for issue, count in findings_counter.items():
 
-            style = (
-                "red"
-                if count > 0
-                else "green"
-            )
+            style = "red" if count > 0 else "green"
 
             label = self.FINDING_LABELS.get(issue, issue)
 
-            self.console.print(
-                f"[{style}]"
-                f"{label}: {count}"
-                f"[/{style}]"
-            )
+            self.console.print(f"[{style}]" f"{label}: {count}" f"[/{style}]")
 
     # =====================================================
     # HELPERS
@@ -158,10 +129,7 @@ class ConsoleReporter:
 
         return "white"
 
-    def _method_style(
-        self,
-        method: str
-    ):
+    def _method_style(self, method: str):
 
         mapping = {
             "GET": "cyan",
@@ -171,10 +139,7 @@ class ConsoleReporter:
             "PUT": "blue",
         }
 
-        return mapping.get(
-            method,
-            "white"
-        )
+        return mapping.get(method, "white")
 
     def print_report_saved(self, report_path, report_type="JSON"):
 

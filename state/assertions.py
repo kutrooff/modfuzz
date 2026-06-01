@@ -14,9 +14,9 @@ class StateAssertionAnalyzer:
             status = result.status_code
 
             if (
-                    method in {"POST", "GET", "PUT", "PATCH"}
-                    and self._is_2xx(status)
-                    and isinstance(result.response_body, dict)
+                method in {"POST", "GET", "PUT", "PATCH"}
+                and self._is_2xx(status)
+                and isinstance(result.response_body, dict)
             ):
                 store.add(
                     ResourceSnapshot(
@@ -79,10 +79,9 @@ class StateAssertionAnalyzer:
         result.success = False
 
     def _check_location_matches_body_id(self, result):
-        location = (
-                result.response_headers.get("location")
-                or result.response_headers.get("Location")
-        )
+        location = result.response_headers.get(
+            "location"
+        ) or result.response_headers.get("Location")
 
         if not location:
             return
@@ -124,5 +123,3 @@ class StateAssertionAnalyzer:
             if read_body.get(key) != expected_value:
                 self._add_issue(read_result, "state_update_not_visible")
                 return
-
-
