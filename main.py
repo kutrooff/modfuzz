@@ -19,8 +19,8 @@ async def main():
     parser.add_argument(
         "--mode",
         choices=["stateless", "stateful"],
-        default="stateless",
-        help="Fuzzing mode",
+        default="stateful",
+        help="Режим фаззинг-тестирования",
     )
 
     parser.add_argument(
