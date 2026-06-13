@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 
+from analysis.models import select_primary_issue
+
 
 class JsonReporter:
     MAX_REPORTS = 15
@@ -72,6 +74,10 @@ class JsonReporter:
             "applied_mutations": getattr(result.case, "applied_mutations", []),
             "status_code": result.status_code,
             "success": result.success,
+            "primary_issue": (
+                result.analysis.primary_issue
+                or select_primary_issue(result.analysis.issues)
+            ),
             "issues": result.analysis.issues,
             "severity": result.analysis.severity,
             "request": {

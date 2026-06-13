@@ -37,14 +37,27 @@ class CrossServiceAssertion:
 
 
 @dataclass(frozen=True)
+class OperationPrerequisite:
+    before_method: str
+    before_path: str
+    setup_method: str
+    setup_path: str
+
+
+@dataclass(frozen=True)
 class StateConfig:
     links: list[StateLinkOverride] = field(default_factory=list)
+    prerequisites: list[OperationPrerequisite] = field(default_factory=list)
     cross_service_assertions: list[CrossServiceAssertion] = field(default_factory=list)
 
 
 def load_state_config(source: str | None) -> StateConfig:
     if not source:
-        return StateConfig(links=[], cross_service_assertions=[])
+        return StateConfig(
+            links=[],
+            prerequisites=[],
+            cross_service_assertions=[],
+        )
 
     path = Path(source)
     text = path.read_text(encoding="utf-8")
@@ -81,6 +94,7 @@ def parse_state_config(raw: dict[str, Any]) -> StateConfig:
 
     return StateConfig(
         links=links,
+        prerequisites=_parse_prerequisites(raw.get("prerequisites", [])),
         cross_service_assertions=_parse_cross_service_assertions(
             raw.get("cross_service_assertions", [])
         ),
@@ -90,6 +104,43 @@ def parse_state_config(raw: dict[str, Any]) -> StateConfig:
 def _parse_operation(value: str) -> tuple[str, str]:
     method, path = value.strip().split(maxsplit=1)
     return method.upper(), path
+
+
+def _parse_prerequisites(raw: Any) -> list[OperationPrerequisite]:
+    if raw is None:
+        return []
+
+    if not isinstance(raw, list):
+        raise ValueError("prerequisites must be a list")
+
+    prerequisites = []
+
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            raise ValueError(f"prerequisites[{index}] must be a mapping")
+
+        before_value = item.get("before")
+        setup_value = item.get("setup") or item.get("run")
+
+        if not isinstance(before_value, str) or not before_value.strip():
+            raise ValueError(f"prerequisites[{index}] must define before")
+
+        if not isinstance(setup_value, str) or not setup_value.strip():
+            raise ValueError(f"prerequisites[{index}] must define setup or run")
+
+        before_method, before_path = _parse_operation(before_value)
+        setup_method, setup_path = _parse_operation(setup_value)
+
+        prerequisites.append(
+            OperationPrerequisite(
+                before_method=before_method,
+                before_path=before_path,
+                setup_method=setup_method,
+                setup_path=setup_path,
+            )
+        )
+
+    return prerequisites
 
 
 def _parse_cross_service_assertions(raw: Any) -> list[CrossServiceAssertion]:

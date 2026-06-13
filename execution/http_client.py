@@ -12,7 +12,7 @@ class AsyncHttpExecutor:
     def __init__(
         self,
         base_url: str,
-        timeout: float = 10.0,
+        timeout: float = 30.0,
         default_headers: Optional[Dict[str, str]] = None,
         verify: bool = True,
         follow_redirects: bool = False,
@@ -24,6 +24,8 @@ class AsyncHttpExecutor:
             timeout=httpx.Timeout(timeout),
             verify=verify,
             follow_redirects=follow_redirects,
+            limits=httpx.Limits(max_keepalive_connections=0),
+            trust_env=False,
         )
 
     async def close(self) -> None:

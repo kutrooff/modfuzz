@@ -3,6 +3,7 @@ from copy import deepcopy
 import random
 from typing import List
 
+from analysis.models import select_primary_issue
 from analysis.response_analyzer import ResponseAnalyzer
 from execution.http_client import AsyncHttpExecutor
 from generation.boundary import generate_boundary_cases
@@ -184,16 +185,14 @@ class FuzzingRunner:
         for result in results:
 
             analysis = result.analysis
+            analysis.primary_issue = select_primary_issue(analysis.issues)
 
             result.analysis = analysis
 
             self.console.print_result(result)
 
-            issues = analysis.issues
-
-            for issue in issues:
-
-                self.console.print_finding(issue, result)
+            if analysis.primary_issue:
+                self.console.print_finding(analysis.primary_issue, result)
 
     def _count_findings(self, results):
 
@@ -201,11 +200,11 @@ class FuzzingRunner:
 
         for result in results:
 
-            issues = result.analysis.issues
+            primary_issue = select_primary_issue(result.analysis.issues)
 
-            for issue in issues:
-
-                findings_counter[issue] += 1
+            if primary_issue:
+                result.analysis.primary_issue = primary_issue
+                findings_counter[primary_issue] += 1
 
         return findings_counter
 

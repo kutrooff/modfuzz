@@ -7,6 +7,7 @@ class ConsoleReporter:
         "invalid_behavior": "Некорректное поведение",
         "hidden_error": "Скрытая ошибка",
         "empty_response": "Пустой ответ",
+        "slow_response": "Медленный ответ",
         "state_read_after_create_failed": "Ресурс не читается после создания",
         "state_update_failed": "Обновление созданного ресурса не выполнено",
         "state_delete_failed": "Удаление созданного ресурса не выполнено",
@@ -67,6 +68,7 @@ class ConsoleReporter:
             "invalid_behavior": "yellow",
             "hidden_error": "magenta",
             "empty_response": "cyan",
+            "slow_response": "yellow",
         }.get(issue_type, "white")
 
         label = self.FINDING_LABELS.get(issue_type, issue_type)

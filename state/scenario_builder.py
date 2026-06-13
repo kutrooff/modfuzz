@@ -8,6 +8,7 @@ from state.models import OperationLink
 
 class StatefulScenarioBuilder:
     def __init__(self, state_config: StateConfig | None = None):
+        self.state_config = state_config or StateConfig()
         self.dependency_analyzer = DependencyAnalyzer(state_config)
 
     def build_sequences(self, test_cases: List[TestCase]) -> List[List[TestCase]]:
@@ -23,6 +24,11 @@ class StatefulScenarioBuilder:
 
         sequences = [
             self._prepend_prerequisites(sequence, test_cases, graph)
+            for sequence in sequences
+        ]
+
+        sequences = [
+            self._prepend_configured_prerequisites(sequence, test_cases)
             for sequence in sequences
         ]
 
@@ -81,25 +87,94 @@ class StatefulScenarioBuilder:
         return False
 
     def _find_login_case(self, test_cases: List[TestCase]) -> TestCase | None:
+        best_case = None
+        best_score = 0
 
         for case in test_cases:
+            score = self._auth_endpoint_score(case.endpoint)
 
-            if self._is_auth_endpoint(case.endpoint):
-                return deepcopy(case)
+            if score > best_score:
+                best_case = case
+                best_score = score
 
-        return None
+        return deepcopy(best_case) if best_case is not None else None
 
     def _is_auth_endpoint(self, endpoint: Endpoint):
+        return self._auth_endpoint_score(endpoint) > 0
 
-        auth_paths = {
-            "/login",
-            "/auth/login",
-            "/signin",
-            "/users/login",
-            "/auth/signin",
-        }
+    def _auth_endpoint_score(self, endpoint: Endpoint) -> int:
+        if endpoint.method.upper() != "POST":
+            return 0
 
-        return endpoint.path.lower() in auth_paths
+        if endpoint.requires_auth:
+            return 0
+
+        path = endpoint.path.lower()
+        operation_id = endpoint.operation_id.lower()
+        tags = " ".join(endpoint.tags).lower()
+        score = 0
+
+        if path.endswith("/login") or path.endswith("/signin"):
+            score += 5
+        elif "/auth/login" in path or "/users/login" in path:
+            score += 4
+        elif "login" in path or "signin" in path:
+            score += 2
+
+        if operation_id in {"login", "signin"}:
+            score += 4
+        elif "login" in operation_id or "signin" in operation_id:
+            score += 2
+
+        if "auth" in tags or "identity" in tags:
+            score += 1
+
+        if self._request_schema_has_credentials(endpoint):
+            score += 2
+
+        if self._responses_contain_token(endpoint):
+            score += 5
+
+        return score
+
+    def _request_schema_has_credentials(self, endpoint: Endpoint) -> bool:
+        if not endpoint.request_body:
+            return False
+
+        properties = endpoint.request_body.schema.get("properties", {})
+
+        if not isinstance(properties, dict):
+            return False
+
+        fields = {field.lower() for field in properties}
+
+        return bool({"password"} & fields and {"email", "username"} & fields)
+
+    def _responses_contain_token(self, endpoint: Endpoint) -> bool:
+        for response in endpoint.responses.values():
+            if self._schema_contains_token(response.schema):
+                return True
+
+        return False
+
+    def _schema_contains_token(self, schema) -> bool:
+        token_fields = {"token", "access_token", "refresh_token"}
+
+        if isinstance(schema, dict):
+            properties = schema.get("properties", {})
+
+            if isinstance(properties, dict):
+                property_names = {name.lower() for name in properties}
+
+                if token_fields & property_names:
+                    return True
+
+            return any(self._schema_contains_token(value) for value in schema.values())
+
+        if isinstance(schema, list):
+            return any(self._schema_contains_token(item) for item in schema)
+
+        return False
 
     def _prepend_auth_if_needed(
         self,
@@ -146,6 +221,65 @@ class StatefulScenarioBuilder:
             planned.append(case)
 
         return planned
+
+    def _prepend_configured_prerequisites(
+        self,
+        sequence: List[TestCase],
+        test_cases: List[TestCase],
+    ) -> List[TestCase]:
+        if not self.state_config.prerequisites:
+            return sequence
+
+        planned: List[TestCase] = []
+
+        for case in sequence:
+            for prerequisite in self.state_config.prerequisites:
+                if not self._matches_operation(
+                    case.endpoint,
+                    prerequisite.before_method,
+                    prerequisite.before_path,
+                ):
+                    continue
+
+                setup_case = self._find_case_by_operation(
+                    test_cases,
+                    prerequisite.setup_method,
+                    prerequisite.setup_path,
+                )
+
+                if setup_case is None:
+                    continue
+
+                if self._contains_endpoint(planned, setup_case.endpoint):
+                    continue
+
+                setup_case = deepcopy(setup_case)
+                setup_case.role = "setup"
+                planned.append(setup_case)
+
+            planned.append(case)
+
+        return planned
+
+    def _find_case_by_operation(
+        self,
+        cases: List[TestCase],
+        method: str,
+        path: str,
+    ) -> TestCase | None:
+        for case in cases:
+            if self._matches_operation(case.endpoint, method, path):
+                return case
+
+        return None
+
+    def _matches_operation(
+        self,
+        endpoint: Endpoint,
+        method: str,
+        path: str,
+    ) -> bool:
+        return endpoint.method.upper() == method and endpoint.path == path
 
     def _append_prerequisites(
         self,

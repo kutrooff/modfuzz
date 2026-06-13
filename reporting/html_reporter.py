@@ -4,6 +4,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from analysis.models import select_primary_issue
+
 
 class HtmlReporter:
     MAX_REPORTS = 15
@@ -43,7 +45,7 @@ class HtmlReporter:
             exist_ok=True,
         )
 
-        timestamp = datetime.now().strftime("%H-%M-%S_%d.%m.%Y")
+        timestamp = datetime.now().strftime("%H-%M-%S_02.%m.%Y")
         report_path = output_path / f"{mode}-report-{timestamp}.html"
 
         with open(report_path, "w", encoding="utf-8") as file:
@@ -272,9 +274,13 @@ class HtmlReporter:
         index = 1
 
         for result in results:
-            for issue in self._issues(result):
-                problems.append((index, issue, result))
-                index += 1
+            issue = self._primary_issue(result)
+
+            if not issue:
+                continue
+
+            problems.append((index, issue, result))
+            index += 1
 
         return problems
 
@@ -333,6 +339,11 @@ class HtmlReporter:
 
     def _issues(self, result) -> list[str]:
         return list(getattr(result.analysis, "issues", []) or [])
+
+    def _primary_issue(self, result) -> str | None:
+        return getattr(result.analysis, "primary_issue", None) or select_primary_issue(
+            self._issues(result)
+        )
 
     def _describe_issue(self, issue: str) -> str:
         return self.ISSUE_DESCRIPTIONS.get(

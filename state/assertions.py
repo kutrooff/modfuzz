@@ -120,6 +120,51 @@ class StateAssertionAnalyzer:
             return
 
         for key, expected_value in update_body.items():
-            if read_body.get(key) != expected_value:
+            if not self._contains_updated_value(read_body, key, expected_value):
                 self._add_issue(read_result, "state_update_not_visible")
                 return
+
+    def _contains_updated_value(self, data, key, expected_value):
+        if isinstance(data, dict):
+            if key in data and self._values_equal(data[key], expected_value):
+                return True
+
+            nested_resource = self._resource_from_id_key(key)
+            if nested_resource:
+                nested_data = data.get(nested_resource)
+
+                if isinstance(nested_data, dict) and self._values_equal(
+                    nested_data.get("id"),
+                    expected_value,
+                ):
+                    return True
+
+            return any(
+                self._contains_updated_value(value, key, expected_value)
+                for value in data.values()
+            )
+
+        if isinstance(data, list):
+            return any(
+                self._contains_updated_value(item, key, expected_value)
+                for item in data
+            )
+
+        return False
+
+    def _resource_from_id_key(self, key):
+        if not key.endswith("_id"):
+            return None
+
+        resource = key[: -len("_id")]
+
+        return resource or None
+
+    def _values_equal(self, actual_value, expected_value):
+        if actual_value == expected_value:
+            return True
+
+        if actual_value is None or expected_value is None:
+            return False
+
+        return str(actual_value) == str(expected_value)

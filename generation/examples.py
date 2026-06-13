@@ -40,7 +40,10 @@ def generate_examples(endpoints: List[Endpoint]) -> List[TestCase]:
         if endpoint.request_body:
             schema = endpoint.request_body.schema
 
-            if schema.get("type") == "object":
+            if "example" in schema:
+                body = schema["example"]
+
+            elif schema.get("type") == "object":
                 body = {}
 
                 properties = schema.get("properties", {})

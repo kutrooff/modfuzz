@@ -10,11 +10,11 @@ from generation.config import load_fuzz_config
 
 async def main():
 
-    parser = argparse.ArgumentParser(description="Modular API fuzzing framework")
+    parser = argparse.ArgumentParser(description="Модульный фреймворк для фаззинг-тестирования API")
 
-    parser.add_argument("--schema", required=True, help="Path or URL to OpenAPI schema")
+    parser.add_argument("--schema", required=True, help="Путь или URL к OpenAPI-спецификации")
 
-    parser.add_argument("--base-url", required=True, help="Base URL of target API")
+    parser.add_argument("--base-url", required=True, help="Базовый URL тестируемого API")
 
     parser.add_argument(
         "--mode",
@@ -24,15 +24,15 @@ async def main():
     )
 
     parser.add_argument(
-        "--state-config",
+        "--fuzz-config",
         default=None,
-        help="Path to state dependency override config YAML/JSON",
+        help="Путь до фаззинг-конфигурации YAML/JSON",
     )
 
     parser.add_argument(
-        "--fuzz-config",
+        "--state-config",
         default=None,
-        help="Path to fuzzing strategy config YAML/JSON",
+        help="Путь к конфигурации зависимостей и состояния YAML/JSON",
     )
 
     args = parser.parse_args()

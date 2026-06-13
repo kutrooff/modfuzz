@@ -29,6 +29,7 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
             request_body = _parse_request_body(info, schema)
 
             responses = _parse_responses(info, schema)
+            auth_scheme = _auth_scheme(info, schema)
 
             # Создание Endpoint
             endpoint = Endpoint(
@@ -41,7 +42,8 @@ def parse_openapi(schema: Dict) -> List[Endpoint]:
                 responses=responses,
                 tags=info.get("tags", []),
                 operation_id=info.get("operationId", ""),
-                requires_auth=_requires_auth(info),
+                requires_auth=bool(auth_scheme),
+                auth_scheme=auth_scheme,
             )
             endpoints.append(endpoint)
 
@@ -199,5 +201,25 @@ def _merge_schema_dicts(base: dict, extra: dict) -> dict:
     return merged
 
 
-def _requires_auth(info: dict) -> bool:
-    return bool(info.get("security"))
+def _auth_scheme(info: dict, schema: dict) -> str:
+    security = info.get("security", schema.get("security", []))
+
+    if not security:
+        return ""
+
+    security_schemes = schema.get("components", {}).get("securitySchemes", {})
+
+    for requirement in security:
+        if not isinstance(requirement, dict):
+            continue
+
+        for scheme_name in requirement:
+            scheme = security_schemes.get(scheme_name, {})
+
+            if (
+                scheme.get("type") == "http"
+                and str(scheme.get("scheme", "")).lower() == "bearer"
+            ):
+                return "bearer"
+
+    return "auth"

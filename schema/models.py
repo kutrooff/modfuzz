@@ -84,6 +84,7 @@ class Endpoint:
     description: str = ""
     operation_id: str = ""
     requires_auth: bool = False
+    auth_scheme: str = ""
 
 
 @dataclass
