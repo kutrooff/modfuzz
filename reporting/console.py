@@ -44,7 +44,8 @@ class ConsoleReporter:
 
         method_style = self._method_style(result.case.method)
 
-        result_style = "green" if result.success else "bold red"
+        result_style = self._result_style(result)
+        result_label = self._result_label(result)
 
         status = str(result.status_code) if result.status_code is not None else "ERR"
 
@@ -57,7 +58,7 @@ class ConsoleReporter:
             f"[/{method_style}] "
             f"{result.case.endpoint.path:<35} "
             f"[{result_style}]"
-            f"{'УСПЕШНО' if result.success else 'ОШИБКА'}"
+            f"{result_label}"
             f"[/{result_style}]"
         )
 
@@ -142,6 +143,27 @@ class ConsoleReporter:
         }
 
         return mapping.get(method, "white")
+
+    def _result_label(self, result) -> str:
+        if not result.success:
+            return "ОШИБКА"
+
+        if self._is_expected_client_error(result.status_code):
+            return "ОЖИДАЕМЫЙ ОТВЕТ"
+
+        return "УСПЕШНО"
+
+    def _result_style(self, result) -> str:
+        if not result.success:
+            return "bold red"
+
+        if self._is_expected_client_error(result.status_code):
+            return "yellow"
+
+        return "green"
+
+    def _is_expected_client_error(self, status_code) -> bool:
+        return status_code is not None and 400 <= status_code < 500
 
     def print_report_saved(self, report_path, report_type="JSON"):
 

@@ -164,7 +164,10 @@ class FuzzingRunner:
 
                         mutated_sequence.append(mutated_case)
 
-                    sequence_results = await executor.run_sequence(mutated_sequence)
+                    sequence_results = await executor.run_sequence(
+                        mutated_sequence,
+                        iteration=iteration + 1,
+                    )
 
                     self._mark_results_context(
                         results=sequence_results,

@@ -18,6 +18,13 @@ class StatefulScenarioBuilder:
         sequences: List[List[TestCase]] = []
 
         sequences.extend(self._build_lifecycle_sequences(test_cases, graph))
+        sequences.extend(
+            self._build_dependency_pair_sequences(
+                test_cases,
+                graph,
+                configured_only=True,
+            )
+        )
 
         if not sequences:
             sequences.extend(self._build_dependency_pair_sequences(test_cases, graph))
@@ -343,10 +350,14 @@ class StatefulScenarioBuilder:
         self,
         test_cases: List[TestCase],
         graph,
+        configured_only: bool = False,
     ) -> List[List[TestCase]]:
         sequences: List[List[TestCase]] = []
 
         for link in graph.links:
+            if configured_only and link.reason != "config_override":
+                continue
+
             source_case = self._find_case(test_cases, link.source)
             target_case = self._find_case(test_cases, link.target)
 
@@ -393,13 +404,19 @@ class StatefulScenarioBuilder:
 
         sequence = [create_copy]
 
-        lifecycle_steps = [
-            (read_case, "verification"),
-            (update_case, "target"),
-            (read_case, "verification"),
-            (delete_case, "cleanup"),
-            (read_case, "verification"),
-        ]
+        if update_case is not None:
+            lifecycle_steps = [
+                (update_case, "target"),
+                (read_case, "verification"),
+                (delete_case, "cleanup"),
+                (read_case, "verification"),
+            ]
+        else:
+            lifecycle_steps = [
+                (read_case, "verification"),
+                (delete_case, "cleanup"),
+                (read_case, "verification"),
+            ]
 
         for case, role in lifecycle_steps:
             if case is None:

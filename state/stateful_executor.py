@@ -81,7 +81,11 @@ class StatefulExecutor:
 
         return result
 
-    async def run_sequence(self, cases: List[TestCase]) -> List[ExecutionResult]:
+    async def run_sequence(
+        self,
+        cases: List[TestCase],
+        iteration: int | None = None,
+    ) -> List[ExecutionResult]:
         results: List[ExecutionResult] = []
         self.state_manager.clear()
 
@@ -106,7 +110,8 @@ class StatefulExecutor:
             results.append(result)
 
             cross_service_results = await self.cross_service_assertions.run_after(
-                result
+                result,
+                iteration=iteration,
             )
             results.extend(cross_service_results)
 

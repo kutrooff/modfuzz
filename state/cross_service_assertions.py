@@ -27,10 +27,12 @@ class CrossServiceAssertionRunner:
         self.state_config = state_config or StateConfig()
         self.resolver = StateResolver(state_manager)
         self.analyzer = ResponseAnalyzer()
+        self._executed_assertions: set[tuple[str, str | int | None]] = set()
 
     async def run_after(
         self,
         trigger_result: ExecutionResult,
+        iteration: int | None = None,
     ) -> list[ExecutionResult]:
         if not self._is_successful_trigger(trigger_result):
             return []
@@ -41,8 +43,12 @@ class CrossServiceAssertionRunner:
             if not self._matches_trigger(assertion, trigger_result):
                 continue
 
+            if not self._should_run_assertion(assertion, iteration):
+                continue
+
             result = await self._run_assertion(assertion)
             results.append(result)
+            self._mark_assertion_executed(assertion, iteration)
 
         return results
 
@@ -62,6 +68,39 @@ class CrossServiceAssertionRunner:
             endpoint.method.upper() == assertion.after_method
             and endpoint.path == assertion.after_path
         )
+
+    def _should_run_assertion(
+        self,
+        assertion: CrossServiceAssertion,
+        iteration: int | None,
+    ) -> bool:
+        if assertion.run == "each_trigger":
+            return True
+
+        return self._execution_key(assertion, iteration) not in self._executed_assertions
+
+    def _mark_assertion_executed(
+        self,
+        assertion: CrossServiceAssertion,
+        iteration: int | None,
+    ) -> None:
+        if assertion.run == "each_trigger":
+            return
+
+        self._executed_assertions.add(self._execution_key(assertion, iteration))
+
+    def _execution_key(
+        self,
+        assertion: CrossServiceAssertion,
+        iteration: int | None,
+    ) -> tuple[str, str | int | None]:
+        if assertion.run == "once_per_iteration":
+            return assertion.name, iteration
+
+        if assertion.run == "once_per_session":
+            return assertion.name, "session"
+
+        return assertion.name, None
 
     async def _run_assertion(
         self,

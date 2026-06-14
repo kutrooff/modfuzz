@@ -24,6 +24,7 @@ class CrossServiceAssertion:
     name: str
     assertion_type: str
     issue: str
+    run: str = "each_trigger"
     after_method: str | None = None
     after_path: str | None = None
     request_method: str = "GET"
@@ -190,6 +191,7 @@ def _parse_cross_service_assertions(raw: Any) -> list[CrossServiceAssertion]:
                 name=item.get("name", f"cross_service_assertion_{index + 1}"),
                 assertion_type=assertion_type,
                 issue=item.get("issue", assertion_type),
+                run=_parse_assertion_run_policy(item.get("run", "each_trigger")),
                 after_method=after_method,
                 after_path=after_path,
                 request_method=request_method,
@@ -222,6 +224,22 @@ def _parse_expected_statuses(value: Any) -> list[int]:
         return result
 
     raise ValueError("expect_status must be an integer or a list of integers")
+
+
+def _parse_assertion_run_policy(value: Any) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("cross_service_assertions.run must be a non-empty string")
+
+    value = value.strip()
+    allowed = {"each_trigger", "once_per_iteration", "once_per_session"}
+
+    if value not in allowed:
+        raise ValueError(
+            "cross_service_assertions.run must be one of: "
+            + ", ".join(sorted(allowed))
+        )
+
+    return value
 
 
 def _optional_mapping(value: Any, name: str) -> dict[str, Any]:
